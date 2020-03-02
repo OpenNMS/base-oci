@@ -1,0 +1,6 @@
+*.swp
+*.snap
+.idea/
+.*swp
+artifacts/*.oci
+**/*.oci

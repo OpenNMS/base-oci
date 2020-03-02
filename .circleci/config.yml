@@ -1,0 +1,74 @@
+---
+version: 2.1
+
+commands:
+  dockerhub-login:
+    description: "Connect to DockerHub"
+    steps:
+      - run:
+          name: Login to DockerHub
+          command: |
+            echo "${DOCKER_PASS}" | docker login -u ${DOCKERHUB_LOGIN} --password-stdin
+
+jobs:
+  build-deploy-base:
+    machine:
+      image: ubuntu-1604:201903-01
+    environment:
+      DOCKER_CLI_EXPERIMENTAL: enabled
+    steps:
+      - checkout
+      - run:
+          name: multiarch/qemu-user-static
+          command: docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+      - run:
+          name: Install Docker buildx
+          command: |
+            sudo wget https://github.com/docker/buildx/releases/download/v0.3.1/buildx-v0.3.1.linux-amd64 -O /usr/local/bin/docker-buildx
+            sudo chmod a+x /usr/local/bin/docker-buildx
+            sudo systemctl restart docker
+      - run:
+          name: Multi-arch build
+          command: make build
+      - store_artifacts:
+          path: ~/project/artifacts/image.oci
+          destination: image.oci
+      - persist_to_workspace:
+          root: ~/
+          paths:
+            - project/artifacts
+
+  build-multiarch-deploy-base:
+    machine:
+      image: ubuntu-1604:201903-01
+    environment:
+      DOCKER_CLI_EXPERIMENTAL: enabled
+    steps:
+      - checkout
+      - run:
+          name: multiarch/qemu-user-static
+          command: docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+      - run:
+          name: Install Docker buildx
+          command: |
+            sudo wget https://github.com/docker/buildx/releases/download/v0.3.1/buildx-v0.3.1.linux-amd64 -O /usr/local/bin/docker-buildx
+            sudo chmod a+x /usr/local/bin/docker-buildx
+            sudo systemctl restart docker
+      - run:
+          name: Multi-arch build
+          command: make build DOCKER_FLAGS=--push DOCKER_ARCH=linux/amd64,linux/arm64,linux/arm/v7
+
+workflows:
+  version: 2
+  main:
+    jobs:
+      - build-deploy-base:
+          filters:
+            branches:
+              ignore:
+                - master
+      - build-multiarch-deploy-base:
+          filters:
+            branches:
+              only:
+                - master

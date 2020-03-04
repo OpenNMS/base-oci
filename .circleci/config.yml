@@ -8,10 +8,10 @@ commands:
       - run:
           name: Login to DockerHub
           command: |
-            echo "${DOCKER_PASS}" | docker login -u ${DOCKERHUB_LOGIN} --password-stdin
+            docker login -u ${DOCKERHUB_LOGIN} -p ${DOCKERHUB_PASS}
 
 jobs:
-  build-deploy-base:
+  build:
     machine:
       image: ubuntu-1604:201903-01
     environment:
@@ -38,13 +38,14 @@ jobs:
           paths:
             - project/artifacts
 
-  build-multiarch-deploy-base:
+  build-publish:
     machine:
       image: ubuntu-1604:201903-01
     environment:
       DOCKER_CLI_EXPERIMENTAL: enabled
     steps:
       - checkout
+      - dockerhub-login
       - run:
           name: multiarch/qemu-user-static
           command: docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
@@ -62,12 +63,12 @@ workflows:
   version: 2
   main:
     jobs:
-      - build-deploy-base:
+      - build:
           filters:
             branches:
               ignore:
                 - master
-      - build-multiarch-deploy-base:
+      - build-publish:
           filters:
             branches:
               only:

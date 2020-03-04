@@ -2,7 +2,7 @@ FROM ubuntu:eoan-20200207
 
 ARG JAVA_MAJOR_VERSION=11
 ARG JAVA_PKG_VERSION=11.0.6+10-1ubuntu1~19.10.1
-ARG JAVA_PKG=openjdk-${JAVA_MAJOR_VERSION}-jdk-headless=${JAVA_PKG_VERSION}
+ARG JAVA_PKG=openjdk-${JAVA_MAJOR_VERSION}-jre-headless=${JAVA_PKG_VERSION}
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends ${JAVA_PKG} && \

@@ -1,4 +1,10 @@
-# Container registry and tags
+## 
+# Makefile to build deploy base image for OpenNMS production container images
+##
+.PHONY: help test build install uninstall clean clean-all
+
+.DEFAULT_GOAL := build
+
 VERSION                 := localbuild
 SHELL                   := /bin/bash -o nounset -o pipefail -o errexit
 BUILD_DATE              := $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
@@ -98,11 +104,7 @@ clean:
 	@docker-buildx rm $(DOCKERX_INSTANCE);
 
 clean-all:
-	@echo "Destroy builder environment: $(DOCKERX_INSTANCE) ..."
+	@echo "Destroy builder environment: $(DOCKERX_INSTANCE) ..."	
 	@docker-buildx rm $(DOCKERX_INSTANCE);
 	@echo "Delete artifacts ..."
 	@rm -rf artifacts/*.*
-
-.DEFAULT_GOAL := build
-
-.PHONY: help test build install uninstall clean clean-all

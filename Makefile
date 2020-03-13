@@ -72,9 +72,9 @@ build: test
 		--build-arg BUILD_DATE=$(BUILD_DATE) \
 		--build-arg SOURCE=$(SOURCE) \
 		--build-arg REVISION=$(REVISION) \
-		--build-arg BUILD_NUMBER=$(CIRCLE_BUILD_NUM) \
-		--build-arg BUILD_URL=$(CIRCLE_BUILD_URL) \
-		--build-arg BUILD_BRANCH=$(CIRCLE_BRANCH) \
+		--build-arg BUILD_NUMBER=$(BUILD_NUMBER) \
+		--build-arg BUILD_URL=$(BUILD_URL) \
+		--build-arg BUILD_BRANCH=$(BUILD_BRANCH) \
 		--build-arg JAVA_MAJOR_VERSION=$(JAVA_MAJOR_VERSION) \
 		--build-arg JAVA_PKG_VERSION=$(JAVA_PKG_VERSION) \
 		--build-arg JAVA_PKG=openjdk-$(JAVA_MAJOR_VERSION)-jre-headless=$(JAVA_PKG_VERSION) \

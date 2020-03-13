@@ -59,13 +59,16 @@ help:
 	@echo ""
 
 test:
-	command -v docker;
-	command -v docker-buildx;
+	@echo "Test Docker and Buildx installation ..."
+	@command -v docker;
+	@command -v docker-buildx;
 
 build: test
   # If we don't have a builder instance create it, otherwise use the existing one
-	if ! docker-buildx inspect $(DOCKERX_INSTANCE); then docker-buildx create --name $(DOCKERX_INSTANCE); fi;
-	docker-buildx use $(DOCKERX_INSTANCE);
+	@echo "Initialize builder instance ..."
+	@if ! docker-buildx inspect $(DOCKERX_INSTANCE); then docker-buildx create --name $(DOCKERX_INSTANCE); fi;
+	@docker-buildx use $(DOCKERX_INSTANCE);
+	@echo "Build container image for architecture: $(DOCKER_ARCH) ..."
 	docker-buildx build --platform=$(DOCKER_ARCH) \
 		--build-arg BASE_IMAGE=$(BASE_IMAGE) \
 		--build-arg VERSION=$(VERSION) \
@@ -83,17 +86,22 @@ build: test
 		. ;
 
 install: artifacts/deploy-base.oci
-	docker image load -i artifacts/deploy-base.oci;
+	@echo "Load image ..."
+	@docker image load -i artifacts/deploy-base.oci;
 
 uninstall:
-	docker rmi $(DOCKER_TAG)
+	@echo "Remove image ..."
+	@docker rmi $(DOCKER_TAG)
 
 clean:
-	docker-buildx rm $(DOCKERX_INSTANCE);
+	@echo "Destroy builder environment: $(DOCKERX_INSTANCE) ..."
+	@docker-buildx rm $(DOCKERX_INSTANCE);
 
 clean-all:
-	docker-buildx rm $(DOCKERX_INSTANCE);
-	rm -rf artifacts/*.*
+	@echo "Destroy builder environment: $(DOCKERX_INSTANCE) ..."
+	@docker-buildx rm $(DOCKERX_INSTANCE);
+	@echo "Delete artifacts ..."
+	@rm -rf artifacts/*.*
 
 .DEFAULT_GOAL := build
 

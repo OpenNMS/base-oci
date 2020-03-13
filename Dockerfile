@@ -1,4 +1,25 @@
+##
+# Pre-stage image to build confd for any kine of architecture we want to support
+##
 ARG BASE_IMAGE=ubuntu:eoan
+FROM ${BASE_IMAGE} as confd-build
+
+ARG CONFD_VERSION="0.16.0"
+ARG CONFD_SOURCE="https://github.com/kelseyhightower/confd.git"
+ARG GOPATH=/root/go
+
+RUN apt-get update && \
+    apt-get install -y golang git-core && \
+    mkdir -p ${GOPATH}/src/github.com/kelseyhightower && \
+    git clone ${CONFD_SOURCE} ${GOPATH}/src/github.com/kelseyhightower/confd && \
+    cd ${GOPATH}/src/github.com/kelseyhightower/confd && \
+    git checkout v${CONFD_VERSION} && \
+    make && \
+    make install
+
+##
+# Assemble deploy base image with confd and OpenJDK
+##
 FROM ${BASE_IMAGE}
 
 ARG JAVA_MAJOR_VERSION=11
@@ -8,6 +29,8 @@ ARG JAVA_PKG=openjdk-${JAVA_MAJOR_VERSION}-jre-headless=${JAVA_PKG_VERSION}
 RUN apt-get update && \
     apt-get install -y --no-install-recommends ${JAVA_PKG} openssh-client && \
     rm -rf /var/lib/apt/lists/*
+
+COPY --from=confd-build /usr/local/bin/confd /usr/local/bin/confd
 
 ARG BUILD_DATE="1970-01-01T00:00:00+0000"
 ARG VCS_URL

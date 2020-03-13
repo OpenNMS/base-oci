@@ -1,11 +1,12 @@
-FROM ubuntu:eoan-20200207
+ARG BASE_IMAGE=ubuntu:eoan
+FROM ${BASE_IMAGE}
 
 ARG JAVA_MAJOR_VERSION=11
 ARG JAVA_PKG_VERSION=11.0.6+10-1ubuntu1~19.10.1
 ARG JAVA_PKG=openjdk-${JAVA_MAJOR_VERSION}-jre-headless=${JAVA_PKG_VERSION}
 
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends ${JAVA_PKG} && \
+    apt-get install -y --no-install-recommends ${JAVA_PKG} openssh-client && \
     rm -rf /var/lib/apt/lists/*
 
 ARG BUILD_DATE="1970-01-01T00:00:00+0000"

@@ -25,6 +25,8 @@ BUILD_BRANCH            := $(shell git describe --always)
 JAVA_MAJOR_VERSION      := 11
 JAVA_PKG_VERSION        := 11.0.6+10-1ubuntu1~19.10.1
 JAVA_PKG                := openjdk-$(JAVA_MAJOR_VERSION)-jre-headless=$(JAVA_PKG_VERSION)
+JICMP_VERSION           := "jicmp-2.0.5-1"
+JICMP6_VERSION          := "jicmp6-2.0.4-1"
 
 help:
 	@echo ""
@@ -76,20 +78,21 @@ build: test
 	@docker-buildx use $(DOCKERX_INSTANCE);
 	@echo "Build container image for architecture: $(DOCKER_ARCH) ..."
 	docker-buildx build --platform=$(DOCKER_ARCH) \
-		--build-arg BASE_IMAGE=$(BASE_IMAGE) \
-		--build-arg VERSION=$(VERSION) \
-		--build-arg BUILD_DATE=$(BUILD_DATE) \
-		--build-arg SOURCE=$(SOURCE) \
-		--build-arg REVISION=$(REVISION) \
-		--build-arg BUILD_NUMBER=$(BUILD_NUMBER) \
-		--build-arg BUILD_URL=$(BUILD_URL) \
-		--build-arg BUILD_BRANCH=$(BUILD_BRANCH) \
-		--build-arg JAVA_MAJOR_VERSION=$(JAVA_MAJOR_VERSION) \
-		--build-arg JAVA_PKG_VERSION=$(JAVA_PKG_VERSION) \
-		--build-arg JAVA_PKG=openjdk-$(JAVA_MAJOR_VERSION)-jre-headless=$(JAVA_PKG_VERSION) \
-		--tag=$(DOCKER_TAG) \
-		$(DOCKER_FLAGS) \
-		. ;
+    --build-arg BASE_IMAGE=$(BASE_IMAGE) \
+    --build-arg VERSION=$(VERSION) \
+    --build-arg BUILD_DATE=$(BUILD_DATE) \
+    --build-arg SOURCE=$(SOURCE) \
+    --build-arg REVISION=$(REVISION) \
+    --build-arg BUILD_NUMBER=$(BUILD_NUMBER) \
+    --build-arg BUILD_URL=$(BUILD_URL) \
+    --build-arg BUILD_BRANCH=$(BUILD_BRANCH) \
+    --build-arg JAVA_MAJOR_VERSION=$(JAVA_MAJOR_VERSION) \
+    --build-arg JAVA_PKG_VERSION=$(JAVA_PKG_VERSION) \
+    --build-arg JICMP_VERSION=$(JICMP_VERSION) \
+    --build-arg JICMP6_VERSION=$(JICMP6_VERSION) \
+    --tag=$(DOCKER_TAG) \
+    $(DOCKER_FLAGS) \
+    . ;
 
 install: artifacts/deploy-base.oci
 	@echo "Load image ..."

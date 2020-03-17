@@ -26,8 +26,11 @@ ARG JAVA_MAJOR_VERSION=11
 ARG JAVA_PKG_VERSION=11.0.6+10-1ubuntu1~19.10.1
 ARG JAVA_PKG=openjdk-${JAVA_MAJOR_VERSION}-jre-headless=${JAVA_PKG_VERSION}
 
+# Install OPenJDK 11 and create an architecture independent Java directory
+# which can be used as Java Home.
 RUN apt-get update && \
     apt-get install -y --no-install-recommends ${JAVA_PKG} openssh-client && \
+    ln -s /usr/lib/jvm/java-11-openjdk* /usr/lib/jvm/java && \
     rm -rf /var/lib/apt/lists/*
 
 COPY --from=confd-build /usr/local/bin/confd /usr/local/bin/confd
@@ -53,4 +56,4 @@ LABEL org.opencontainers.image.created="${BUILD_DATE}" \
       org.opennms.cicd.buildurl="${BUILD_URL}" \
       org.opennms.cicd.branch="${BUILD_BRANCH}"
 
-ENV JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
+ENV JAVA_HOME=/usr/lib/jvm/java

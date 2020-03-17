@@ -64,8 +64,10 @@ ARG JAVA_HOME=/usr/lib/jvm/java
 
 # Install OPenJDK 11 and create an architecture independent Java directory
 # which can be used as Java Home.
+# We need to install inetutils-ping. It is required to get the JNI Pinger to work.
+# The JNI Pinger is tested with getprotobyname("icmp") and it is null if inetutils-ping is missing
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends ${JAVA_PKG} openssh-client && \
+    apt-get install -y --no-install-recommends ${JAVA_PKG} openssh-client inetutils-ping && \
     ln -s /usr/lib/jvm/java-11-openjdk* ${JAVA_HOME} && \
     rm -rf /var/lib/apt/lists/*
 

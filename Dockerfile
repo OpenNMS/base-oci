@@ -66,8 +66,9 @@ ARG JAVA_HOME=/usr/lib/jvm/java
 # which can be used as Java Home.
 # We need to install inetutils-ping. It is required to get the JNI Pinger to work.
 # The JNI Pinger is tested with getprotobyname("icmp") and it is null if inetutils-ping is missing
+# To be able to use DGRAM to send ICMP messages we have to give the java binary CAP_NET_RAW capabilities in Linux.
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends ${JAVA_PKG} openssh-client inetutils-ping && \
+    apt-get install -y --no-install-recommends ${JAVA_PKG} openssh-client inetutils-ping libcap2-bin && \
     ln -s /usr/lib/jvm/java-11-openjdk* ${JAVA_HOME} && \
     rm -rf /var/lib/apt/lists/*
 

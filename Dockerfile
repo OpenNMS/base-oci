@@ -1,7 +1,7 @@
 ##
 # Pre-stage image to build confd for any kine of architecture we want to support
 ##
-ARG BASE_IMAGE=ubuntu:eoan
+ARG BASE_IMAGE=ubuntu:focal
 FROM ${BASE_IMAGE} as confd-build
 
 ARG CONFD_VERSION="0.16.0"
@@ -9,7 +9,8 @@ ARG CONFD_SOURCE="https://github.com/kelseyhightower/confd.git"
 ARG GOPATH=/root/go
 
 RUN apt-get update && \
-    apt-get install -y golang git-core && \
+    DEBIAN_FRONTEND="noninteractive" apt-get -y install tzdata && \
+    apt-get install -y make golang git-core && \
     mkdir -p ${GOPATH}/src/github.com/kelseyhightower && \
     git clone ${CONFD_SOURCE} ${GOPATH}/src/github.com/kelseyhightower/confd && \
     cd ${GOPATH}/src/github.com/kelseyhightower/confd && \
@@ -32,6 +33,7 @@ ARG JICMP6_SRC=/usr/src/jicmp6
 
 # Install build dependencies for JICMP and JICMP6
 RUN apt-get update && \
+    DEBIAN_FRONTEND="noninteractive" apt-get -y install tzdata && \
     apt-get install -y git-core build-essential dh-autoreconf openjdk-8-jdk-headless
 
 # Checkout and build JICMP
@@ -58,7 +60,7 @@ RUN git clone ${JICMP6_GIT_REPO_URL} ${JICMP6_SRC} && \
 FROM ${BASE_IMAGE}
 
 ARG JAVA_MAJOR_VERSION=11
-ARG JAVA_PKG_VERSION=11.0.6+10-1ubuntu1~19.10.1
+ARG JAVA_PKG_VERSION=11.0.7+10-2ubuntu1
 ARG JAVA_PKG=openjdk-${JAVA_MAJOR_VERSION}-jre-headless=${JAVA_PKG_VERSION}
 ARG JAVA_HOME=/usr/lib/jvm/java
 

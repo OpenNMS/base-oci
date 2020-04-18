@@ -57,7 +57,7 @@ jobs:
             sudo systemctl restart docker
       - run:
           name: Multi-arch build
-          command: make VERSION="jre-1.0.0.b${CIRCLE_BUILD_NUM}" DOCKER_FLAGS=--push DOCKER_ARCH=linux/amd64,linux/arm64,linux/arm/v7
+          command: make VERSION="jre-1.1.0.b${CIRCLE_BUILD_NUM}" DOCKER_FLAGS=--push DOCKER_ARCH=linux/amd64,linux/arm64,linux/arm/v7
 
 workflows:
   version: 2

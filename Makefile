@@ -8,7 +8,7 @@
 VERSION                 := localbuild
 SHELL                   := /bin/bash -o nounset -o pipefail -o errexit
 BUILD_DATE              := $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
-BASE_IMAGE              := ubuntu:focal
+BASE_IMAGE              := ubuntu:focal-20201106
 DOCKER_CLI_EXPERIMENTAL := enabled
 DOCKERX_INSTANCE	      := env-deploy-base-oci
 DOCKER_REGISTRY         := docker.io
@@ -23,7 +23,7 @@ BUILD_NUMBER            := "unset"
 BUILD_URL               := "unset"
 BUILD_BRANCH            := $(shell git describe --always)
 JAVA_MAJOR_VERSION      := 11
-JAVA_PKG_VERSION        := 11.0.7+10-2ubuntu1
+JAVA_PKG_VERSION        := 11.0.9.1+1-0ubuntu1~20.04
 JAVA_PKG                := openjdk-$(JAVA_MAJOR_VERSION)-jre-headless=$(JAVA_PKG_VERSION)
 JICMP_VERSION           := "jicmp-2.0.5-1"
 JICMP6_VERSION          := "jicmp6-2.0.4-1"

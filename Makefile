@@ -23,7 +23,7 @@ BUILD_NUMBER            := "unset"
 BUILD_URL               := "unset"
 BUILD_BRANCH            := $(shell git describe --always)
 JAVA_MAJOR_VERSION      := 11
-JAVA_PKG_VERSION        := 11.0.9.1+1-0ubuntu1~20.04
+JAVA_PKG_VERSION        := 11.0.7+10-3ubuntu1
 JAVA_PKG                := openjdk-$(JAVA_MAJOR_VERSION)-jre-headless=$(JAVA_PKG_VERSION)
 JICMP_VERSION           := "jicmp-2.0.5-1"
 JICMP6_VERSION          := "jicmp6-2.0.4-1"

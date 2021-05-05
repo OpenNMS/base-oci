@@ -60,7 +60,7 @@ RUN git clone ${JICMP6_GIT_REPO_URL} ${JICMP6_SRC} && \
 FROM ${BASE_IMAGE}
 
 ARG JAVA_MAJOR_VERSION=11
-ARG JAVA_PKG_VERSION=11.0.7+10-2ubuntu1
+ARG JAVA_PKG_VERSION=11.0.7+10-3ubuntu1
 ARG JAVA_PKG=openjdk-${JAVA_MAJOR_VERSION}-jre-headless=${JAVA_PKG_VERSION}
 ARG JAVA_HOME=/usr/lib/jvm/java
 
@@ -70,7 +70,7 @@ ARG JAVA_HOME=/usr/lib/jvm/java
 # The JNI Pinger is tested with getprotobyname("icmp") and it is null if inetutils-ping is missing
 # To be able to use DGRAM to send ICMP messages we have to give the java binary CAP_NET_RAW capabilities in Linux.
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends ${JAVA_PKG} openssh-client inetutils-ping libcap2-bin && \
+    apt-get install -y --no-install-recommends ${JAVA_PKG} openssh-client inetutils-ping libcap2-bin tzdata && \
     ln -s /usr/lib/jvm/java-11-openjdk* ${JAVA_HOME} && \
     rm -rf /var/lib/apt/lists/*
 

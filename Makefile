@@ -77,7 +77,10 @@ build: test
 	@if ! docker-buildx inspect $(DOCKERX_INSTANCE); then docker-buildx create --name $(DOCKERX_INSTANCE); fi;
 	@docker-buildx use $(DOCKERX_INSTANCE);
 	@echo "Build container image for architecture: $(DOCKER_ARCH) ..."
-	docker-buildx build --platform=$(DOCKER_ARCH) \
+	BASE_IMAGE=${BASE_IMAGE} envsubst '$$BASE_IMAGE' < Dockerfile > SubstitutedDockerfile
+	@echo "DOCKER_CONTENT_TRUST: $${DOCKER_CONTENT_TRUST=1}"
+	docker-buildx build --file SubstitutedDockerfile \
+	--platform=$(DOCKER_ARCH) \
     --build-arg BASE_IMAGE=$(BASE_IMAGE) \
     --build-arg VERSION=$(VERSION) \
     --build-arg BUILD_DATE=$(BUILD_DATE) \

@@ -20,7 +20,7 @@ aliases:
       echo "export IMAGE=docker.io/${DOCKER_ORG}/deploy-base" >> $BASH_ENV
       echo "export VERSION=jre-1.2.0.b<< pipeline.number >>" >> $BASH_ENV
     environment:
-      DOCKER_ORG: opennmsdcttest
+      DOCKER_ORG: opennms
 
   - &load_dct_keys
     name: Load signer key
@@ -28,6 +28,7 @@ aliases:
       KEY_FOLDER=~/.docker/trust/private
       mkdir -p $KEY_FOLDER
       echo "$DCT_DELEGATE_KEY" | base64 -d > $KEY_FOLDER/$DCT_DELEGATE_KEY_NAME.key
+      echo "done first decoding"
       echo "$DCT_REPO_DEPLOY_BASE_KEY" | base64 -d > $KEY_FOLDER/$DCT_REPO_DEPLOY_BASE_KEY_NAME.key
       chmod 600 $KEY_FOLDER/*
       docker trust key load $KEY_FOLDER/$DCT_DELEGATE_KEY_NAME.key
@@ -44,7 +45,7 @@ jobs:
       - run: *load_dct_keys
       - run:
           name: multiarch/qemu-user-static
-          command: docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+          command: DOCKER_CONTENT_TRUST=0 docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
       - run:
           name: Install Docker buildx
           command: |
@@ -154,7 +155,6 @@ workflows:
           filters:
             branches:
               ignore:
-                - jira/NMS-13318
                 - master
       - build-publish-single-arch:
           matrix:
@@ -164,7 +164,6 @@ workflows:
           filters:
             branches:
               only:
-                - jira/NMS-13318
                 - master
       - publish-multi-arch:
           context: "docker-content-trust"
@@ -173,5 +172,4 @@ workflows:
           filters:
             branches:
               only:
-                - jira/NMS-13318
                 - master

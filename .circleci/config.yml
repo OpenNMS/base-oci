@@ -10,6 +10,29 @@ commands:
           command: |
             docker login -u ${DOCKERHUB_LOGIN} -p ${DOCKERHUB_PASS}
 
+aliases:
+  - &setup_dct_env
+    name: Setup DCT environment
+    command: |
+      echo "export DOCKER_ORG=${DOCKER_ORG}" >> $BASH_ENV
+      echo "export DOCKER_CONTENT_TRUST=1" >> $BASH_ENV
+      echo "export DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE=\"$DCT_DELEGATE_KEY_PASSPHRASE\"" >> $BASH_ENV
+      echo "export IMAGE=docker.io/${DOCKER_ORG}/deploy-base" >> $BASH_ENV
+      echo "export VERSION=jre-1.2.0.b<< pipeline.number >>" >> $BASH_ENV
+    environment:
+      DOCKER_ORG: opennms
+
+  - &load_dct_keys
+    name: Load signer key
+    command: |
+      KEY_FOLDER=~/.docker/trust/private
+      mkdir -p $KEY_FOLDER
+      echo "$DCT_DELEGATE_KEY" | base64 -d > $KEY_FOLDER/$DCT_DELEGATE_KEY_NAME.key
+      echo "done first decoding"
+      echo "$DCT_REPO_DEPLOY_BASE_KEY" | base64 -d > $KEY_FOLDER/$DCT_REPO_DEPLOY_BASE_KEY_NAME.key
+      chmod 600 $KEY_FOLDER/*
+      docker trust key load $KEY_FOLDER/$DCT_DELEGATE_KEY_NAME.key
+
 jobs:
   build:
     machine:
@@ -18,9 +41,11 @@ jobs:
       DOCKER_CLI_EXPERIMENTAL: enabled
     steps:
       - checkout
+      - run: *setup_dct_env
+      - run: *load_dct_keys
       - run:
           name: multiarch/qemu-user-static
-          command: docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+          command: DOCKER_CONTENT_TRUST=0 docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
       - run:
           name: Install Docker buildx
           command: |
@@ -38,7 +63,10 @@ jobs:
           paths:
             - project/artifacts
 
-  build-publish:
+  build-publish-single-arch:
+    parameters:
+      architecture:
+        type: string
     machine:
       image: ubuntu-2004:202010-01
     environment:
@@ -46,9 +74,11 @@ jobs:
     steps:
       - checkout
       - dockerhub-login
+      - run: *setup_dct_env
+      - run: *load_dct_keys
       - run:
           name: multiarch/qemu-user-static
-          command: docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+          command: DOCKER_CONTENT_TRUST=0 docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
       - run:
           name: Install Docker buildx
           command: |
@@ -56,19 +86,89 @@ jobs:
             sudo chmod a+x /usr/local/bin/docker-buildx
             sudo systemctl restart docker
       - run:
-          name: Multi-arch build
-          command: make VERSION="jre-1.2.0.b${CIRCLE_BUILD_NUM}" DOCKER_FLAGS=--push DOCKER_ARCH=linux/amd64,linux/arm64,linux/arm/v7
+          name: Single-arch build & push
+          command: |
+            ARCH="$(printf "<< parameters.architecture >>" | tr / -)"
+            TAG="${VERSION}-${ARCH}"
+            make VERSION="${TAG}" DOCKER_ORG="${DOCKER_ORG}" DOCKER_FLAGS=--load DOCKER_ARCH=<< parameters.architecture >>
+            docker push ${IMAGE}:${TAG}
+
+  publish-multi-arch:
+    machine:
+      image: ubuntu-2004:202010-01
+    environment:
+      DOCKER_CLI_EXPERIMENTAL: enabled
+    steps:
+      - dockerhub-login
+      - run: *setup_dct_env
+      - run: *load_dct_keys
+      - run:
+          name: Install notary
+          command: |
+            sudo wget https://github.com/theupdateframework/notary/releases/download/v0.6.1/notary-Linux-amd64 -O /usr/local/bin/notary
+            sudo chmod a+x /usr/local/bin/notary
+      - run:
+          name: Create & push multi-arch manifest
+          command: |
+            IMAGE_REF="${IMAGE}:${VERSION}"
+            docker manifest create ${IMAGE_REF} \
+              ${IMAGE_REF}-linux-amd64 \
+              ${IMAGE_REF}-linux-arm64 \
+              ${IMAGE_REF}-linux-arm-v7 \
+              --amend
+            SHA_256="$(docker manifest push "${IMAGE_REF}" --purge | cut -d ':' -f 2)"
+            echo "Manifest SHA-256: ${SHA_256}"
+            echo "Image-Ref: ${IMAGE_REF}"
+            MANIFEST_FROM_REG="$(docker manifest inspect "${IMAGE_REF}" -v)";
+            BYTES_SIZE="$(printf "${MANIFEST_FROM_REG}" | jq -r '.[].Descriptor.size' | uniq)";
+            echo "Manifest-inspect BYTES: ${BYTES_SIZE}";
+            echo "Manifest contents:\n";
+            printf "${MANIFEST_FROM_REG}" | jq -r '.[].Descriptor | "Architecture: " + .platform.architecture + .platform.variant + ", digest: " + .digest';
+            export NOTARY_AUTH="$(printf "${DOCKERHUB_LOGIN}:${DOCKERHUB_PASS}" | base64 -w0)"
+            echo "Sign ${SHA_256} with the notary"
+            # when the multi-arch image is signed by the delegate key then docker pull reports "No valid trust data..."
+            # -> the following lines can not be used:
+            #
+            # export NOTARY_DELEGATION_PASSPHRASE="${DCT_DELEGATE_KEY_PASSPHRASE}"
+            # notary -d ~/.docker/trust/ -s https://notary.docker.io addhash "${IMAGE}" "${VERSION}" 946 --sha256 "${SHA_256}" --roles targets/opennms-circle-delegate --publish --verbose
+            #
+            # -> use the targets key of the deploy-base repository to sign the multi-arch image instead
+            export NOTARY_TARGETS_PASSPHRASE="${DCT_REPO_DEPLOY_BASE_KEY_PASSPHRASE}"
+            notary -d ~/.docker/trust/ -s https://notary.docker.io addhash "${IMAGE}" "${VERSION}" "${BYTES_SIZE}" --sha256 "${SHA_256}" --publish --verbose
+            echo "Done!"
+            # notary -s https://notary.docker.io list "${IMAGE}"
+
+# docker-buildx does not support signing multi-arch images
+# cf. - https://github.com/docker/buildx/issues/313
+#     - https://github.com/sudo-bot/action-docker-sign#sign-multi-platform-manifests
+#
+# -> build and sign the images for each architecture separately
+# -> create a manifest for the multi-arch image and push it
+# -> use notary to sign the manifest (this needs the targets key of the deploy-base repository)
 
 workflows:
   version: 2
   main:
     jobs:
       - build:
+          context: "docker-content-trust"
           filters:
             branches:
               ignore:
                 - master
-      - build-publish:
+      - build-publish-single-arch:
+          matrix:
+            parameters:
+              architecture: [linux/amd64,linux/arm64,linux/arm/v7]
+          context: "docker-content-trust"
+          filters:
+            branches:
+              only:
+                - master
+      - publish-multi-arch:
+          context: "docker-content-trust"
+          requires:
+            - build-publish-single-arch
           filters:
             branches:
               only:

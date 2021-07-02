@@ -1,6 +1,9 @@
+.DS_Store
 *.swp
 *.snap
-.idea/
+.idea
 .*swp
+*.iml
 artifacts/*.oci
 **/*.oci
+Dockerfile

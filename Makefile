@@ -4,37 +4,52 @@
 .PHONY: help test build install uninstall clean clean-all
 
 .DEFAULT_GOAL := build
+.EXPORT_ALL_VARIABLES:
 
-VERSION                 := localbuild
-SHELL                   := /bin/bash -o nounset -o pipefail -o errexit
-BUILD_DATE              := $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
-BASE_IMAGE              := ubuntu:focal-20201106
-DOCKER_CLI_EXPERIMENTAL := enabled
+VERSION                   := localbuild
+SHELL                     := bash -o nounset -o pipefail -o errexit
+BUILD_DATE                := $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
+BASE_IMAGE                := ubuntu:focal-20210609
+
+DOCKER_CLI_EXPERIMENTAL   := enabled
 DOCKERX_INSTANCE	      := env-deploy-base-oci
-DOCKER_REGISTRY         := docker.io
-DOCKER_ORG              := opennms
-DOCKER_PROJECT          := deploy-base
-DOCKER_TAG              := $(DOCKER_REGISTRY)/$(DOCKER_ORG)/$(DOCKER_PROJECT):$(VERSION)
-DOCKER_ARCH             := linux/amd64
-DOCKER_FLAGS            := --output=type=docker,dest=artifacts/deploy-base.oci
-SOURCE                  := $(shell git remote get-url origin)
-REVISION                := $(shell git describe --always)
-BUILD_NUMBER            := "unset"
-BUILD_URL               := "unset"
-BUILD_BRANCH            := $(shell git describe --always)
-JAVA_MAJOR_VERSION      := 11
-JAVA_PKG_VERSION        := 11.0.7+10-3ubuntu1
-JAVA_PKG                := openjdk-$(JAVA_MAJOR_VERSION)-jre-headless=$(JAVA_PKG_VERSION)
-JICMP_VERSION           := "jicmp-2.0.5-1"
-JICMP6_VERSION          := "jicmp6-2.0.4-1"
+DOCKER_REGISTRY           := docker.io
+DOCKER_ORG                := opennms
+DOCKER_PROJECT            := deploy-base
+DOCKER_TAG                := $(DOCKER_REGISTRY)/$(DOCKER_ORG)/$(DOCKER_PROJECT):$(VERSION)
+DOCKER_ARCH               := linux/amd64
+DOCKER_FLAGS              := --output=type=docker,dest=artifacts/deploy-base.oci
+
+VCS_SOURCE                := $(shell git remote get-url origin)
+VCS_REVISION              := $(shell git describe --always)
+BUILD_NUMBER              := unset
+BUILD_URL                 := unset
+BUILD_BRANCH              := $(shell git describe --always)
+
+JAVA_MAJOR_VERSION        := 11
+JAVA_PKG_VERSION          := 11.0.11+9-0ubuntu2~20.04
+JAVA_PKG                  := openjdk-$(JAVA_MAJOR_VERSION)-jre-headless=$(JAVA_PKG_VERSION)
+JAVA_HOME                 := /usr/lib/jvm/java
+
+JICMP_GIT_REPO_URL        := https://github.com/opennms/jicmp
+JICMP_VERSION             := jicmp-2.0.5-1
+
+JICMP6_GIT_REPO_URL       := https://github.com/opennms/jicmp6
+JICMP6_VERSION            := jicmp6-2.0.4-1
+
+GOPATH                    := /root/go
+CONFD_SOURCE              := https://github.com/kelseyhightower/confd.git
+CONFD_VERSION             := 0.16.0
+
+PROM_JMX_EXPORTER_VERSION := 0.15.0
+PROM_JMX_EXPORTER_URL     := https://repo1.maven.org/maven2/io/prometheus/jmx/jmx_prometheus_javaagent/$(PROM_JMX_EXPORTER_VERSION)/jmx_prometheus_javaagent-$(PROM_JMX_EXPORTER_VERSION).jar
 
 help:
 	@echo ""
 	@echo "Makefile to build multi-architecture deploy base image and push to a registry."
 	@echo ""
 	@echo "Requirements to build images:"
-	@echo "  * Docker 18+"
-	@echo "  * Buildx CLI tools from https://github.com/docker/buildx/releases in search path as docker-buildx"
+	@echo "  * Docker 19+"
 	@echo ""
 	@echo "Targets:"
 	@echo "  help:      Show this help"
@@ -68,33 +83,19 @@ help:
 
 test:
 	@echo "Test Docker and Buildx installation ..."
-	@command -v docker;
-	@command -v docker-buildx;
+	@command -v docker
 
-build: test
+Dockerfile:
+	@echo "Generate Dockerfile from template"
+	envsubst < "Dockerfile.tpl" > "Dockerfile"
+
+build: test Dockerfile
   # If we don't have a builder instance create it, otherwise use the existing one
 	@echo "Initialize builder instance ..."
-	@if ! docker-buildx inspect $(DOCKERX_INSTANCE); then docker-buildx create --name $(DOCKERX_INSTANCE); fi;
-	@docker-buildx use $(DOCKERX_INSTANCE);
+	@if ! docker buildx inspect $(DOCKERX_INSTANCE); then docker buildx create --name $(DOCKERX_INSTANCE); fi;
+	@docker buildx use $(DOCKERX_INSTANCE);
 	@echo "Build container image for architecture: $(DOCKER_ARCH) ..."
-	BASE_IMAGE=${BASE_IMAGE} envsubst '$$BASE_IMAGE' < Dockerfile > SubstitutedDockerfile
-	docker-buildx build --file SubstitutedDockerfile \
-	--platform=$(DOCKER_ARCH) \
-    --build-arg BASE_IMAGE=$(BASE_IMAGE) \
-    --build-arg VERSION=$(VERSION) \
-    --build-arg BUILD_DATE=$(BUILD_DATE) \
-    --build-arg SOURCE=$(SOURCE) \
-    --build-arg REVISION=$(REVISION) \
-    --build-arg BUILD_NUMBER=$(BUILD_NUMBER) \
-    --build-arg BUILD_URL=$(BUILD_URL) \
-    --build-arg BUILD_BRANCH=$(BUILD_BRANCH) \
-    --build-arg JAVA_MAJOR_VERSION=$(JAVA_MAJOR_VERSION) \
-    --build-arg JAVA_PKG_VERSION=$(JAVA_PKG_VERSION) \
-    --build-arg JICMP_VERSION=$(JICMP_VERSION) \
-    --build-arg JICMP6_VERSION=$(JICMP6_VERSION) \
-    --tag=$(DOCKER_TAG) \
-    $(DOCKER_FLAGS) \
-    . ;
+	docker buildx build --platform="$(DOCKER_ARCH)" --tag=$(DOCKER_TAG) $(DOCKER_FLAGS) . ;
 
 install: artifacts/deploy-base.oci
 	@echo "Load image ..."
@@ -106,10 +107,9 @@ uninstall:
 
 clean:
 	@echo "Destroy builder environment: $(DOCKERX_INSTANCE) ..."
-	@docker-buildx rm $(DOCKERX_INSTANCE);
+	@docker buildx rm $(DOCKERX_INSTANCE);
+	@rm Dockerfile
 
-clean-all:
-	@echo "Destroy builder environment: $(DOCKERX_INSTANCE) ..."	
-	@docker-buildx rm $(DOCKERX_INSTANCE);
+clean-all: clean
 	@echo "Delete artifacts ..."
 	@rm -rf artifacts/*.*

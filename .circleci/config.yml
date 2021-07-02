@@ -18,7 +18,7 @@ aliases:
       echo "export DOCKER_CONTENT_TRUST=1" >> $BASH_ENV
       echo "export DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE=\"$DCT_DELEGATE_KEY_PASSPHRASE\"" >> $BASH_ENV
       echo "export IMAGE=docker.io/${DOCKER_ORG}/deploy-base" >> $BASH_ENV
-      echo "export VERSION=jre-1.2.0.b<< pipeline.number >>" >> $BASH_ENV
+      echo "export VERSION=$(cat release.version).b<< pipeline.number >>" >> $BASH_ENV
     environment:
       DOCKER_ORG: opennms
 
@@ -35,35 +35,6 @@ aliases:
 
 jobs:
   build:
-    machine:
-      image: ubuntu-2004:202010-01
-    environment:
-      DOCKER_CLI_EXPERIMENTAL: enabled
-    steps:
-      - checkout
-      - run: *setup_dct_env
-      - run: *load_dct_keys
-      - run:
-          name: multiarch/qemu-user-static
-          command: DOCKER_CONTENT_TRUST=0 docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
-      - run:
-          name: Install Docker buildx
-          command: |
-            sudo wget https://github.com/docker/buildx/releases/download/v0.5.1/buildx-v0.5.1.linux-amd64 -O /usr/local/bin/docker-buildx
-            sudo chmod a+x /usr/local/bin/docker-buildx
-            sudo systemctl restart docker
-      - run:
-          name: Multi-arch build
-          command: make build
-      - store_artifacts:
-          path: ~/project/artifacts/image.oci
-          destination: image.oci
-      - persist_to_workspace:
-          root: ~/
-          paths:
-            - project/artifacts
-
-  build-publish-single-arch:
     parameters:
       architecture:
         type: string
@@ -73,6 +44,42 @@ jobs:
       DOCKER_CLI_EXPERIMENTAL: enabled
     steps:
       - checkout
+      - run: *setup_dct_env
+      - run: *load_dct_keys
+      - run:
+          name: multiarch/qemu-user-static
+          command: DOCKER_CONTENT_TRUST=0 docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+      - run:
+          name: Single-arch build
+          command: |
+            ARCH="$(printf "<< parameters.architecture >>" | tr / -)"
+            TAG="${VERSION}-${ARCH}"
+            make DOCKER_ARCH="<< parameters.architecture >>" VERSION="${TAG}" DOCKER_ORG="${DOCKER_ORG}" DOCKER_FLAGS="--output=type=docker,dest=artifacts/image_${ARCH}.oci"
+      - run: rm artifacts/.gitkeep
+      - run:
+          name: Verify
+          command: |
+            ARCH="$(printf "<< parameters.architecture >>" | tr / -)"
+            TAG="${VERSION}-${ARCH}"
+            docker manifest inspect "${TAG}"
+      - store_artifacts:
+          path: ~/project/artifacts
+      - persist_to_workspace:
+          root: ~/
+          paths:
+            - project/artifacts
+
+  publish-single-arch:
+    parameters:
+      architecture:
+        type: string
+    machine:
+      image: ubuntu-2004:202010-01
+    environment:
+      DOCKER_CLI_EXPERIMENTAL: enabled
+    steps:
+      - attach_workspace:
+          at: ~/
       - dockerhub-login
       - run: *setup_dct_env
       - run: *load_dct_keys
@@ -80,17 +87,11 @@ jobs:
           name: multiarch/qemu-user-static
           command: DOCKER_CONTENT_TRUST=0 docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
       - run:
-          name: Install Docker buildx
-          command: |
-            sudo wget https://github.com/docker/buildx/releases/download/v0.5.1/buildx-v0.5.1.linux-amd64 -O /usr/local/bin/docker-buildx
-            sudo chmod a+x /usr/local/bin/docker-buildx
-            sudo systemctl restart docker
-      - run:
           name: Single-arch build & push
           command: |
             ARCH="$(printf "<< parameters.architecture >>" | tr / -)"
             TAG="${VERSION}-${ARCH}"
-            make VERSION="${TAG}" DOCKER_ORG="${DOCKER_ORG}" DOCKER_FLAGS=--load DOCKER_ARCH=<< parameters.architecture >>
+            docker image load -i "artifacts/image_${ARCH}.oci"
             docker push ${IMAGE}:${TAG}
 
   publish-multi-arch:
@@ -102,6 +103,9 @@ jobs:
       - dockerhub-login
       - run: *setup_dct_env
       - run: *load_dct_keys
+      - run:
+          name: multiarch/qemu-user-static
+          command: DOCKER_CONTENT_TRUST=0 docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
       - run:
           name: Install notary
           command: |
@@ -138,29 +142,22 @@ jobs:
             echo "Done!"
             # notary -s https://notary.docker.io list "${IMAGE}"
 
-# docker-buildx does not support signing multi-arch images
-# cf. - https://github.com/docker/buildx/issues/313
-#     - https://github.com/sudo-bot/action-docker-sign#sign-multi-platform-manifests
-#
-# -> build and sign the images for each architecture separately
-# -> create a manifest for the multi-arch image and push it
-# -> use notary to sign the manifest (this needs the targets key of the deploy-base repository)
-
 workflows:
   version: 2
   main:
     jobs:
       - build:
+          matrix:
+            parameters:
+              architecture: [ linux/amd64,linux/arm64,linux/arm/v7 ]
           context: "docker-content-trust"
-          filters:
-            branches:
-              ignore:
-                - master
-      - build-publish-single-arch:
+      - publish-single-arch:
           matrix:
             parameters:
               architecture: [linux/amd64,linux/arm64,linux/arm/v7]
           context: "docker-content-trust"
+          requires:
+            - build
           filters:
             branches:
               only:
@@ -168,7 +165,7 @@ workflows:
       - publish-multi-arch:
           context: "docker-content-trust"
           requires:
-            - build-publish-single-arch
+            - publish-single-arch
           filters:
             branches:
               only:

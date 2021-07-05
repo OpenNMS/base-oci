@@ -13,9 +13,9 @@ BASE_IMAGE                := ubuntu:focal-20210609
 
 DOCKER_CLI_EXPERIMENTAL   := enabled
 DOCKERX_INSTANCE	      := env-deploy-base-oci
-DOCKER_REGISTRY           := docker.io
-DOCKER_ORG                := opennms
-DOCKER_PROJECT            := deploy-base
+DOCKER_REGISTRY           ?= 
+DOCKER_ORG                ?= 
+DOCKER_PROJECT            ?= deploy-base
 DOCKER_TAG                := $(DOCKER_REGISTRY)/$(DOCKER_ORG)/$(DOCKER_PROJECT):$(VERSION)
 DOCKER_ARCH               := linux/amd64
 DOCKER_FLAGS              := --output=type=docker,dest=artifacts/deploy-base.oci

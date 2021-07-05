@@ -20,7 +20,7 @@ aliases:
       echo "export IMAGE=docker.io/${DOCKER_ORG}/deploy-base" >> $BASH_ENV
       echo "export VERSION=$(cat release.version).b<< pipeline.number >>" >> $BASH_ENV
     environment:
-      DOCKER_ORG: opennms
+      DOCKER_ORG: labmonkeys
 
   - &load_dct_keys
     name: Load signer key
@@ -61,7 +61,6 @@ jobs:
           command: |
             ARCH="$(printf "<< parameters.architecture >>" | tr / -)"
             TAG="${VERSION}-${ARCH}"
-            docker manifest inspect "${TAG}"
       - store_artifacts:
           path: ~/project/artifacts
       - persist_to_workspace:
@@ -87,12 +86,17 @@ jobs:
           name: multiarch/qemu-user-static
           command: DOCKER_CONTENT_TRUST=0 docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
       - run:
-          name: Single-arch build & push
+          name: Verify if image name is available
+          command: |
+            ARCH="$(printf "<< parameters.architecture >>" | tr / -)"
+            TAG="${VERSION}-${ARCH}"
+            docker manifest inspect "${TAG}"
+      - run:
+          name: Push single-arch OCI
           command: |
             ARCH="$(printf "<< parameters.architecture >>" | tr / -)"
             TAG="${VERSION}-${ARCH}"
             docker image load -i "artifacts/image_${ARCH}.oci"
-            docker push ${IMAGE}:${TAG}
 
   publish-multi-arch:
     machine:
@@ -158,10 +162,6 @@ workflows:
           context: "docker-content-trust"
           requires:
             - build
-          filters:
-            branches:
-              only:
-                - master
       - publish-multi-arch:
           context: "docker-content-trust"
           requires:

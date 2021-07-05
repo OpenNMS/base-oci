@@ -5,28 +5,29 @@
 
 .DEFAULT_GOAL := build
 
-VERSION                 := localbuild
-SHELL                   := /bin/bash -o nounset -o pipefail -o errexit
-BUILD_DATE              := $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
-BASE_IMAGE              := ubuntu:focal-20201106
-DOCKER_CLI_EXPERIMENTAL := enabled
-DOCKERX_INSTANCE	      := env-deploy-base-oci
-DOCKER_REGISTRY         := docker.io
-DOCKER_ORG              := opennms
-DOCKER_PROJECT          := deploy-base
-DOCKER_TAG              := $(DOCKER_REGISTRY)/$(DOCKER_ORG)/$(DOCKER_PROJECT):$(VERSION)
-DOCKER_ARCH             := linux/amd64
-DOCKER_FLAGS            := --output=type=docker,dest=artifacts/deploy-base.oci
-SOURCE                  := $(shell git remote get-url origin)
-REVISION                := $(shell git describe --always)
-BUILD_NUMBER            := "unset"
-BUILD_URL               := "unset"
-BUILD_BRANCH            := $(shell git describe --always)
-JAVA_MAJOR_VERSION      := 11
-JAVA_PKG_VERSION        := 11.0.7+10-3ubuntu1
-JAVA_PKG                := openjdk-$(JAVA_MAJOR_VERSION)-jre-headless=$(JAVA_PKG_VERSION)
-JICMP_VERSION           := "jicmp-2.0.5-1"
-JICMP6_VERSION          := "jicmp6-2.0.4-1"
+VERSION                    := localbuild
+SHELL                      := /bin/bash -o nounset -o pipefail -o errexit
+BUILD_DATE                 := $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
+BASE_IMAGE                 := ubuntu:focal-20210609
+DOCKER_CLI_EXPERIMENTAL    := enabled
+DOCKERX_INSTANCE           := env-deploy-base-oci
+DOCKER_REGISTRY            := docker.io
+DOCKER_ORG                 := opennms
+DOCKER_PROJECT             := deploy-base
+DOCKER_TAG                 := $(DOCKER_REGISTRY)/$(DOCKER_ORG)/$(DOCKER_PROJECT):$(VERSION)
+DOCKER_ARCH                := linux/amd64
+DOCKER_FLAGS               := --output=type=docker,dest=artifacts/deploy-base.oci
+SOURCE                     := $(shell git remote get-url origin)
+REVISION                   := $(shell git describe --always)
+BUILD_NUMBER               := "unset"
+BUILD_URL                  := "unset"
+BUILD_BRANCH               := $(shell git describe --always)
+JAVA_MAJOR_VERSION         := 11
+JAVA_PKG_VERSION           := 11.0.11+9-0ubuntu2~20.04
+JAVA_PKG                   := openjdk-$(JAVA_MAJOR_VERSION)-jre-headless=$(JAVA_PKG_VERSION)
+JICMP_VERSION              := jicmp-2.0.5-1
+JICMP6_VERSION             := jicmp6-2.0.4-1
+PROM_JMX_EXPORTER_VERSION  := 0.16
 
 help:
 	@echo ""
@@ -46,21 +47,22 @@ help:
 	@echo "  clean-all: Remove the Dockerx build instance and delete *everything* in the directory artifacts/"
 	@echo ""
 	@echo "Arguments to modify the build:"
-	@echo "  VERSION:            Version number for this release of the deploy-base artefact, default: $(VERSION)"
-	@echo "  BASE_IMAGE:         The base image we install our Java app as a tarball, default: $(BASE_IMAGE)"
-	@echo "  DOCKERX_INSTANCE:   Name of the docker buildx instance, default: $(DOCKERX_INSTANCE)"
-	@echo "  DOCKER_REGISTRY:    Registry to push the image to, default is set to $(DOCKER_REGISTRY)"
-	@echo "  DOCKER_ORG:         Organisation where the image should pushed in the registry, default is set to $(DOCKER_ORG)"
-	@echo "  DOCKER_PROJECT:     Name of the project in the registry, the default is set to $(DOCKER_PROJECT)"
-	@echo "  DOCKER_TAG:         Docker tag is generated from registry, org, project, version and build number, set to $(DOCKER_TAG)"
-	@echo "  DOCKER_ARCH:        Architecture for OCI image, default: $(DOCKER_ARCH)"
-	@echo "  DOCKER_FLAGS:       Additional docker buildx flags, by default write a single architecture to a file, default: $(DOCKER_FLAGS)"
-	@echo "  BUILD_NUMBER:       In case we run in CI/CD this is the build number which produced the artifact, default: $(BUILD_NUMBER)"
-	@echo "  BUILD_URL:          In case we run in CI/CD this is the URL which for the build, default: $(BUILD_URL)"
-	@echo "  BUILD_BRANCH:       In case we run in CI/CD this is the branch of the build, default: $(BUILD_BRANCH)"
-	@echo "  JAVA_MAJOR_VERSION: Major version number from Java package, default: $(JAVA_MAJOR_VERSION)"
-	@echo "  JAVA_PKG_VERSION:   Java package version, default: $(JAVA_PKG_VERSION)"
-	@echo "  JAVA_PKG:           Java package to install, default: $(JAVA_PKG)"
+	@echo "  VERSION:                   Version number for this release of the deploy-base artefact, default: $(VERSION)"
+	@echo "  BASE_IMAGE:                The base image we install our Java app as a tarball, default: $(BASE_IMAGE)"
+	@echo "  DOCKERX_INSTANCE:          Name of the docker buildx instance, default: $(DOCKERX_INSTANCE)"
+	@echo "  DOCKER_REGISTRY:           Registry to push the image to, default is set to $(DOCKER_REGISTRY)"
+	@echo "  DOCKER_ORG:                Organisation where the image should pushed in the registry, default is set to $(DOCKER_ORG)"
+	@echo "  DOCKER_PROJECT:            Name of the project in the registry, the default is set to $(DOCKER_PROJECT)"
+	@echo "  DOCKER_TAG:                Docker tag is generated from registry, org, project, version and build number, set to $(DOCKER_TAG)"
+	@echo "  DOCKER_ARCH:               Architecture for OCI image, default: $(DOCKER_ARCH)"
+	@echo "  DOCKER_FLAGS:              Additional docker buildx flags, by default write a single architecture to a file, default: $(DOCKER_FLAGS)"
+	@echo "  BUILD_NUMBER:              In case we run in CI/CD this is the build number which produced the artifact, default: $(BUILD_NUMBER)"
+	@echo "  BUILD_URL:                 In case we run in CI/CD this is the URL which for the build, default: $(BUILD_URL)"
+	@echo "  BUILD_BRANCH:              In case we run in CI/CD this is the branch of the build, default: $(BUILD_BRANCH)"
+	@echo "  JAVA_MAJOR_VERSION:        Major version number from Java package, default: $(JAVA_MAJOR_VERSION)"
+	@echo "  JAVA_PKG_VERSION:          Java package version, default: $(JAVA_PKG_VERSION)"
+	@echo "  JAVA_PKG:                  Java package to install, default: $(JAVA_PKG)"
+	@echo "  PROM_JMX_EXPORTER_VERSION: Prometheus JMX exporter version, default: $(PROM_JMX_EXPORTER_VERSION)"
 	@echo ""
 	@echo "Example:"
 	@echo "  make build DOCKER_REGISTRY=myregistry.com DOCKER_ORG=myorg DOCKER_FLAGS=--push"

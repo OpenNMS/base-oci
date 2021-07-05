@@ -63,6 +63,8 @@ ARG JAVA_MAJOR_VERSION=11
 ARG JAVA_PKG_VERSION=11.0.7+10-3ubuntu1
 ARG JAVA_PKG=openjdk-${JAVA_MAJOR_VERSION}-jre-headless=${JAVA_PKG_VERSION}
 ARG JAVA_HOME=/usr/lib/jvm/java
+ARG PROM_JMX_EXPORTER_VERSION="0.16.0"
+ARG PROM_JMX_EXPORTER_URL="https://repo1.maven.org/maven2/io/prometheus/jmx/jmx_prometheus_javaagent/${PROM_JMX_EXPORTER_VERSION}/jmx_prometheus_javaagent-${PROM_JMX_EXPORTER_VERSION}.jar"
 
 # Install OPenJDK 11 and create an architecture independent Java directory
 # which can be used as Java Home.
@@ -70,9 +72,12 @@ ARG JAVA_HOME=/usr/lib/jvm/java
 # The JNI Pinger is tested with getprotobyname("icmp") and it is null if inetutils-ping is missing
 # To be able to use DGRAM to send ICMP messages we have to give the java binary CAP_NET_RAW capabilities in Linux.
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends ${JAVA_PKG} openssh-client inetutils-ping libcap2-bin tzdata && \
+    apt-get install -y --no-install-recommends ${JAVA_PKG} wget ca-certificates openssh-client inetutils-ping libcap2-bin tzdata && \
     ln -s /usr/lib/jvm/java-11-openjdk* ${JAVA_HOME} && \
-    rm -rf /var/lib/apt/lists/*
+    update-ca-certificates -f && \
+    rm -rf /var/lib/apt/lists/* && \
+    mkdir -p /opt/prom-jmx-exporter && \
+    wget "${PROM_JMX_EXPORTER_URL}" --output-document=/opt/prom-jmx-exporter/jmx_prometheus_javaagent.jar
 
 # Install confd
 COPY --from=confd-build /usr/local/bin/confd /usr/local/bin/confd

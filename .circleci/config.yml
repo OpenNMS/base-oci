@@ -14,12 +14,14 @@ aliases:
   - &setup_dct_env
     name: Setup DCT environment
     command: |
+      echo "export DOCKER_REGISTRY=${DOCKER_REGISTRY}" >> $BASH_ENV
       echo "export DOCKER_ORG=${DOCKER_ORG}" >> $BASH_ENV
       echo "export DOCKER_CONTENT_TRUST=1" >> $BASH_ENV
       echo "export DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE=\"$DCT_DELEGATE_KEY_PASSPHRASE\"" >> $BASH_ENV
-      echo "export IMAGE=docker.io/${DOCKER_ORG}/deploy-base" >> $BASH_ENV
+      echo "export IMAGE=${DOCKER_REGISTRY}/${DOCKER_ORG}/deploy-base" >> $BASH_ENV
       echo "export VERSION=$(cat release.version).b<< pipeline.number >>" >> $BASH_ENV
     environment:
+      DOCKER_REGISTRY: docker.io
       DOCKER_ORG: labmonkeys
 
   - &load_dct_keys

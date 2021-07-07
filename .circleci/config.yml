@@ -1,25 +1,20 @@
 ---
 version: 2.1
 
-commands:
-  dockerhub-login:
-    description: "Connect to DockerHub"
-    steps:
-      - run:
-          name: Login to DockerHub
-          command: |
-            docker login -u ${DOCKERHUB_LOGIN} -p ${DOCKERHUB_PASS}
-
 aliases:
   - &setup_dct_env
     name: Setup DCT environment
     command: |
+      echo "export DOCKER_REGISTRY=${DOCKER_REGISTRY}" >> $BASH_ENV
       echo "export DOCKER_ORG=${DOCKER_ORG}" >> $BASH_ENV
       echo "export DOCKER_CONTENT_TRUST=1" >> $BASH_ENV
       echo "export DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE=\"$DCT_DELEGATE_KEY_PASSPHRASE\"" >> $BASH_ENV
-      echo "export IMAGE=docker.io/${DOCKER_ORG}/deploy-base" >> $BASH_ENV
-      echo "export VERSION=jre-1.2.0.b<< pipeline.number >>" >> $BASH_ENV
+      echo "export CONTAINER_REGISTRY_LOGIN=${DOCKERHUB_LOGIN}"
+      echo "export CONTAINER_REGISTRY_PASS=${DOCKERHUB_PASS}"
+      echo "export IMAGE=${DOCKER_REGISTRY}/${DOCKER_ORG}/deploy-base" >> $BASH_ENV
+      echo "export VERSION=jre-1.2.1.b<< pipeline.number >>" >> $BASH_ENV
     environment:
+      DOCKER_REGISTRY: docker.io
       DOCKER_ORG: opennms
 
   - &load_dct_keys
@@ -34,36 +29,7 @@ aliases:
       docker trust key load $KEY_FOLDER/$DCT_DELEGATE_KEY_NAME.key
 
 jobs:
-  build:
-    machine:
-      image: ubuntu-2004:202010-01
-    environment:
-      DOCKER_CLI_EXPERIMENTAL: enabled
-    steps:
-      - checkout
-      - run: *setup_dct_env
-      - run: *load_dct_keys
-      - run:
-          name: multiarch/qemu-user-static
-          command: DOCKER_CONTENT_TRUST=0 docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
-      - run:
-          name: Install Docker buildx
-          command: |
-            sudo wget https://github.com/docker/buildx/releases/download/v0.5.1/buildx-v0.5.1.linux-amd64 -O /usr/local/bin/docker-buildx
-            sudo chmod a+x /usr/local/bin/docker-buildx
-            sudo systemctl restart docker
-      - run:
-          name: Multi-arch build
-          command: make build
-      - store_artifacts:
-          path: ~/project/artifacts/image.oci
-          destination: image.oci
-      - persist_to_workspace:
-          root: ~/
-          paths:
-            - project/artifacts
-
-  build-publish-single-arch:
+  local-oci-build:
     parameters:
       architecture:
         type: string
@@ -73,25 +39,41 @@ jobs:
       DOCKER_CLI_EXPERIMENTAL: enabled
     steps:
       - checkout
-      - dockerhub-login
+      - run:
+          name: multiarch/qemu-user-static
+          command: DOCKER_CONTENT_TRUST=0 docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+      - run:
+          name: Single-arch build
+          command: |
+            make oci ARCHITECTURE="<< parameters.architecture >>"
+      - run: rm artifacts/.gitkeep
+      - store_artifacts:
+          path: ~/project/artifacts
+
+  publish-single-arch:
+    parameters:
+      architecture:
+        type: string
+    machine:
+      image: ubuntu-2004:202010-01
+    environment:
+      DOCKER_CLI_EXPERIMENTAL: enabled
+    steps:
+      - checkout
       - run: *setup_dct_env
       - run: *load_dct_keys
       - run:
           name: multiarch/qemu-user-static
           command: DOCKER_CONTENT_TRUST=0 docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
       - run:
-          name: Install Docker buildx
+          name: Push single-arch OCI
           command: |
-            sudo wget https://github.com/docker/buildx/releases/download/v0.5.1/buildx-v0.5.1.linux-amd64 -O /usr/local/bin/docker-buildx
-            sudo chmod a+x /usr/local/bin/docker-buildx
-            sudo systemctl restart docker
-      - run:
-          name: Single-arch build & push
-          command: |
-            ARCH="$(printf "<< parameters.architecture >>" | tr / -)"
-            TAG="${VERSION}-${ARCH}"
-            make VERSION="${TAG}" DOCKER_ORG="${DOCKER_ORG}" DOCKER_FLAGS=--load DOCKER_ARCH=<< parameters.architecture >>
-            docker push ${IMAGE}:${TAG}
+            make publish ARCHITECTURE="<< parameters.architecture >>" \
+              CONTAINER_REGISTRY="${DOCKER_REGISTRY}" \
+              TAG_ORG="${DOCKER_ORG}" \
+              CONTAINER_REGISTRY_LOGIN="${DOCKERHUB_LOGIN}" \
+              CONTAINER_REGISTRY_PASS="${DOCKERHUB_PASS}" \
+              VERSION=${VERSION}
 
   publish-multi-arch:
     machine:
@@ -99,22 +81,37 @@ jobs:
     environment:
       DOCKER_CLI_EXPERIMENTAL: enabled
     steps:
-      - dockerhub-login
+      - checkout
       - run: *setup_dct_env
       - run: *load_dct_keys
+      - run:
+          name: Login to DockerHub
+          command: |
+            docker login -u ${DOCKERHUB_LOGIN} -p ${DOCKERHUB_PASS}
+      - run:
+          name: multiarch/qemu-user-static
+          command: DOCKER_CONTENT_TRUST=0 docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
       - run:
           name: Install notary
           command: |
             sudo wget https://github.com/theupdateframework/notary/releases/download/v0.6.1/notary-Linux-amd64 -O /usr/local/bin/notary
             sudo chmod a+x /usr/local/bin/notary
+
+      # docker buildx does not support signing multi-arch images
+      # cf. - https://github.com/docker/buildx/issues/313
+      #     - https://github.com/sudo-bot/action-docker-sign#sign-multi-platform-manifests
+      #
+      # -> Sign the images for each architecture separately
+      # -> Create a manifest for the multi-arch image and push it
+      # -> Use notary to sign the manifest (this needs the targets key of the deploy-base repository)
       - run:
           name: Create & push multi-arch manifest
           command: |
             IMAGE_REF="${IMAGE}:${VERSION}"
             docker manifest create ${IMAGE_REF} \
-              ${IMAGE_REF}-linux-amd64 \
-              ${IMAGE_REF}-linux-arm64 \
-              ${IMAGE_REF}-linux-arm-v7 \
+              ${IMAGE_REF}-amd64 \
+              ${IMAGE_REF}-arm64 \
+              ${IMAGE_REF}-arm-v7 \
               --amend
             SHA_256="$(docker manifest push "${IMAGE_REF}" --purge | cut -d ':' -f 2)"
             echo "Manifest SHA-256: ${SHA_256}"
@@ -138,38 +135,29 @@ jobs:
             echo "Done!"
             # notary -s https://notary.docker.io list "${IMAGE}"
 
-# docker-buildx does not support signing multi-arch images
-# cf. - https://github.com/docker/buildx/issues/313
-#     - https://github.com/sudo-bot/action-docker-sign#sign-multi-platform-manifests
-#
-# -> build and sign the images for each architecture separately
-# -> create a manifest for the multi-arch image and push it
-# -> use notary to sign the manifest (this needs the targets key of the deploy-base repository)
-
 workflows:
   version: 2
   main:
     jobs:
-      - build:
-          context: "docker-content-trust"
+      - local-oci-build:
+          matrix:
+            parameters:
+              architecture: [linux/amd64,linux/arm64,linux/arm/v7]
           filters:
             branches:
-              ignore:
-                - master
-      - build-publish-single-arch:
+              ignore: master
+      - publish-single-arch:
           matrix:
             parameters:
               architecture: [linux/amd64,linux/arm64,linux/arm/v7]
           context: "docker-content-trust"
           filters:
             branches:
-              only:
-                - master
+              only: master
       - publish-multi-arch:
           context: "docker-content-trust"
           requires:
-            - build-publish-single-arch
+            - publish-single-arch
           filters:
             branches:
-              only:
-                - master
+              only: master

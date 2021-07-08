@@ -72,12 +72,12 @@ ARG PROM_JMX_EXPORTER_URL="https://repo1.maven.org/maven2/io/prometheus/jmx/jmx_
 # The JNI Pinger is tested with getprotobyname("icmp") and it is null if inetutils-ping is missing
 # To be able to use DGRAM to send ICMP messages we have to give the java binary CAP_NET_RAW capabilities in Linux.
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends ${JAVA_PKG} wget ca-certificates openssh-client inetutils-ping libcap2-bin tzdata && \
+    apt-get install -y --no-install-recommends ${JAVA_PKG} curl wget ca-certificates openssh-client inetutils-ping libcap2-bin tzdata && \
     ln -s /usr/lib/jvm/java-11-openjdk* ${JAVA_HOME} && \
     update-ca-certificates -f && \
     rm -rf /var/lib/apt/lists/* && \
     mkdir -p /opt/prom-jmx-exporter && \
-    wget "${PROM_JMX_EXPORTER_URL}" --output-document=/opt/prom-jmx-exporter/jmx_prometheus_javaagent.jar
+    curl "${PROM_JMX_EXPORTER_URL}" --output /opt/prom-jmx-exporter/jmx_prometheus_javaagent.jar
 
 # Install confd
 COPY --from=confd-build /usr/local/bin/confd /usr/local/bin/confd

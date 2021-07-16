@@ -89,9 +89,6 @@ jobs:
           command: |
             docker login -u ${DOCKERHUB_LOGIN} -p ${DOCKERHUB_PASS}
       - run:
-          name: multiarch/qemu-user-static
-          command: DOCKER_CONTENT_TRUST=0 docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
-      - run:
           name: Install notary
           command: |
             sudo wget https://github.com/theupdateframework/notary/releases/download/v0.6.1/notary-Linux-amd64 -O /usr/local/bin/notary

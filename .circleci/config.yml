@@ -46,7 +46,6 @@ jobs:
           name: Single-arch build
           command: |
             make oci ARCHITECTURE="<< parameters.architecture >>"
-      - run: rm artifacts/.gitkeep
       - store_artifacts:
           path: ~/project/artifacts
 

@@ -107,6 +107,7 @@ builder-instance: dep
 
 oci: Dockerfile builder-instance
 	@echo "Build container image for architecture: $(ARCHITECTURE) ..."
+	@mkdir -p artifacts
 	@docker buildx build --output=type=docker,dest=artifacts/$(TAG_PROJECT)-$(TAG_ARCH).oci --platform="$(ARCHITECTURE)" --tag=$(TAG_PROJECT):$(TAG_ARCH) $(DOCKER_FLAGS) . ;
 
 install: oci
@@ -139,4 +140,4 @@ clean: uninstall
 clean-all: clean
 	@echo "Delete artifacts ..."
 	@rm Dockerfile
-	@rm -rf artifacts/*.*
+	@rm -rf artifacts

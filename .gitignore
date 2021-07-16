@@ -3,6 +3,6 @@
 *.snap
 .idea/
 .*swp
-artifacts/*.oci
+artifacts/
 **/*.oci
 Dockerfile

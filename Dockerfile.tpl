@@ -1,7 +1,7 @@
 ##
 # DO NOT EDIT: This file is generated from the Dockerfile.tpl
 #
-# Pre-stage image to build confd for any kine of architecture we want to support
+# Pre-stage image to build confd for any kind of architecture we want to support
 ##
 FROM ${BASE_IMAGE} as confd-build
 

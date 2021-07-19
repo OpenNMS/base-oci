@@ -10,7 +10,7 @@
 
 SHELL                     := bash -o nounset -o pipefail -o errexit
 BUILD_DATE                := $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
-BASE_IMAGE                := ubuntu:focal-20210609
+BASE_IMAGE                := ubuntu:focal-20210713
 
 DOCKER_CLI_EXPERIMENTAL   := enabled
 ARCHITECTURE              := linux/amd64

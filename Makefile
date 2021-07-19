@@ -14,7 +14,7 @@ BASE_IMAGE                := ubuntu:focal-20210713
 
 DOCKER_CLI_EXPERIMENTAL   := enabled
 ARCHITECTURE              := linux/amd64
-BUILDER_INSTANCE	      := env-deploy-base-oci
+BUILDER_INSTANCE          := env-deploy-base-oci
 TAG_ARCH                  := $(subst /,-,$(subst linux/,,$(ARCHITECTURE)))
 
 # Version fallback uses the latest git version tag or the git hash if no git version is set.

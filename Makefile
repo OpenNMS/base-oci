@@ -10,7 +10,7 @@
 
 SHELL                     := bash -o nounset -o pipefail -o errexit
 BUILD_DATE                := $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
-BASE_IMAGE                := ubuntu:focal-20210713
+BASE_IMAGE                := ubuntu:focal
 
 DOCKER_CLI_EXPERIMENTAL   := enabled
 ARCHITECTURE              := linux/amd64
@@ -35,15 +35,15 @@ BUILD_URL                 ?= unset
 BUILD_BRANCH              ?= $(shell git branch --show-current)
 
 JAVA_MAJOR_VERSION        := 11
-JAVA_PKG_VERSION          := 11.0.11+9-0ubuntu2~20.04
+JAVA_PKG_VERSION          := 11.0.16+8-0ubuntu1~20.04
 JAVA_PKG                  := openjdk-$(JAVA_MAJOR_VERSION)-jre-headless=$(JAVA_PKG_VERSION)
 JAVA_HOME                 := /usr/lib/jvm/java
 
 JICMP_GIT_REPO_URL        := https://github.com/opennms/jicmp
-JICMP_VERSION             := jicmp-2.0.5-1
+JICMP_VERSION             := jicmp-3.0.0-2
 
 JICMP6_GIT_REPO_URL       := https://github.com/opennms/jicmp6
-JICMP6_VERSION            := jicmp6-2.0.4-1
+JICMP6_VERSION            := jicmp6-3.0.0-2
 
 GOPATH                    := /root/go
 CONFD_SOURCE              := https://github.com/kelseyhightower/confd.git

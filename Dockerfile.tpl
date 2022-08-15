@@ -23,7 +23,8 @@ FROM ${BASE_IMAGE} as jicmp-build
 
 # Install build dependencies for JICMP and JICMP6
 RUN apt-get update && \
-    DEBIAN_FRONTEND="noninteractive" apt-get install --no-install-recommends -y ca-certificates git-core build-essential dh-autoreconf openjdk-8-jdk-headless
+    env DEBIAN_FRONTEND="noninteractive" apt-get install --no-install-recommends -y ca-certificates git-core build-essential dh-autoreconf && \
+    env DEBIAN_FRONTEND="noninteractive" apt-get install --no-install-recommends -y openjdk-8-jdk-headless
 
 # Checkout and build JICMP
 RUN git clone "${JICMP_GIT_REPO_URL}" /usr/src/jicmp && \
@@ -54,9 +55,12 @@ FROM ${BASE_IMAGE}
 # The JNI Pinger is tested with getprotobyname("icmp") and it is null if inetutils-ping is missing
 # To be able to use DGRAM to send ICMP messages we have to give the java binary CAP_NET_RAW capabilities in Linux.
 RUN apt-get update && \
-    DEBIAN_FRONTEND="noninteractive" apt-get install --no-install-recommends -y "${JAVA_PKG}" curl ca-certificates openssh-client inetutils-ping libcap2-bin tzdata && \
+    DEBIAN_FRONTEND="noninteractive" apt-get install --no-install-recommends -y curl ca-certificates openssh-client inetutils-ping libcap2-bin tzdata && \
+    DEBIAN_FRONTEND="noninteractive" apt-get install --no-install-recommends -y "${JAVA_PKG}" && \
     ln -s /usr/lib/jvm/java-11-openjdk* "${JAVA_HOME}" && \
     rm -rf /var/lib/apt/lists/* && \
+    apt-get clean && \
+    rm -rf /var/cache/apt && \
     mkdir -p /opt/prom-jmx-exporter && \
     curl "${PROM_JMX_EXPORTER_URL}" --output /opt/prom-jmx-exporter/jmx_prometheus_javaagent.jar
 

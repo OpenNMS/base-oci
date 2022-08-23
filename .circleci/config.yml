@@ -47,7 +47,8 @@ jobs:
           command: |
             make oci ARCHITECTURE="<< parameters.architecture >>"
       - store_artifacts:
-          path: ~/project/artifacts
+          path: ~/project/artifacts/
+          destination: /
 
   publish-single-arch:
     parameters:

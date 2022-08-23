@@ -1,53 +1,88 @@
 ##
 # DO NOT EDIT: This file is generated from the Dockerfile.tpl
-#
-# Pre-stage image to build confd for any kind of architecture we want to support
 ##
-FROM ${BASE_IMAGE} as confd-build
+
+##
+# do some common things that all layers use, on top of the Ubuntu base; also
+# make sure security updates are installed
+##
+FROM ${BASE_IMAGE} as core
+
+RUN apt-get update && \
+    env DEBIAN_FRONTEND="noninteractive" apt-get install --no-install-recommends -y \
+        ca-certificates \
+        curl \
+        inetutils-ping \
+        libcap2-bin \
+        openssh-client \
+        tzdata \
+    && \
+    env DEBIAN_FRONTEND="noninteractive" apt-get install --no-install-recommends -y \
+        "${JAVA_PKG}" \
+    && \
+    grep security /etc/apt/sources.list > /tmp/security.sources.list && \
+    apt-get update \
+        -o Dir::Etc::SourceList=/tmp/security.sources.list && \
+    env DEBIAN_FRONTEND="noninteractive" apt-get full-upgrade \
+        --no-install-recommends -y -u \
+        -o Dir::Etc::SourceList=/tmp/security.sources.list && \
+    apt-get clean && \
+    rm -rf /var/cache/apt /var/lib/apt/lists/* /tmp/security.sources.list
+
+##
+# create a "base" image for 3rd-party builds of confd, jicmp, and jicmp6
+##
+FROM core as third-party-base
+
+RUN apt-get update && \
+    env DEBIAN_FRONTEND="noninteractive" apt-get install --no-install-recommends -y \
+        build-essential \
+        dh-autoreconf \
+        golang \
+        git-core \
+        make \
+    && \
+    env DEBIAN_FRONTEND="noninteractive" apt-get install --no-install-recommends -y \
+        openjdk-8-jdk-headless
+
+FROM third-party-base as confd-build
 
 ARG GOPATH=/root/go
 
-RUN apt-get update && \
-    DEBIAN_FRONTEND="noninteractive" apt-get -y install tzdata make golang git-core && \
-    mkdir -p "${GOPATH}/src/github.com/kelseyhightower" && \
-    git clone "${CONFD_SOURCE}" "${GOPATH}/src/github.com/kelseyhightower/confd" && \
+RUN mkdir -p "${GOPATH}/src/github.com/kelseyhightower" && \
+    git clone --depth 1 --branch "v${CONFD_VERSION}" "${CONFD_SOURCE}" "${GOPATH}/src/github.com/kelseyhightower/confd" && \
     cd "${GOPATH}/src/github.com/kelseyhightower/confd" && \
-    git checkout "v${CONFD_VERSION}" && \
+    go mod init && \
+    sed -i -e 's,-ldflags,-mod=mod -ldflags,g' Makefile && \
     make && \
     make install
 
 ##
 # Pre-stage image to build jicmp and jicmp6
 ##
-FROM ${BASE_IMAGE} as jicmp-build
+FROM third-party-base as jicmp-build
 
 # Install build dependencies for JICMP and JICMP6
-RUN apt-get update && \
-    env DEBIAN_FRONTEND="noninteractive" apt-get install --no-install-recommends -y ca-certificates git-core build-essential dh-autoreconf && \
-    env DEBIAN_FRONTEND="noninteractive" apt-get install --no-install-recommends -y openjdk-8-jdk-headless
-
 # Checkout and build JICMP
-RUN git clone "${JICMP_GIT_REPO_URL}" /usr/src/jicmp && \
+RUN git clone --depth 1 --branch "${JICMP_VERSION}" "${JICMP_GIT_REPO_URL}" /usr/src/jicmp && \
     cd /usr/src/jicmp && \
-    git checkout "${JICMP_VERSION}" && \
-    git submodule update --init --recursive && \
+    git submodule update --init --recursive --depth 1 && \
     autoreconf -fvi && \
     ./configure && \
-    make -j$(nproc)
+    make -j1
 
 # Checkout and build JICMP6
-RUN git clone "${JICMP6_GIT_REPO_URL}" /usr/src/jicmp6 && \
+RUN git clone --depth 1 --branch "${JICMP6_VERSION}" "${JICMP6_GIT_REPO_URL}" /usr/src/jicmp6 && \
     cd /usr/src/jicmp6 && \
-    git checkout "${JICMP6_VERSION}" && \
-    git submodule update --init --recursive && \
+    git submodule update --init --recursive --depth 1 && \
     autoreconf -fvi && \
     ./configure && \
-    make -j$(nproc)
+    make -j1
 
 ##
 # Assemble deploy base image with jicmp, jicmp6, confd and OpenJDK
 ##
-FROM ${BASE_IMAGE}
+FROM core
 
 # Install OpenJDK 11 and create an architecture independent Java directory
 # which can be used as Java Home.
@@ -55,12 +90,12 @@ FROM ${BASE_IMAGE}
 # The JNI Pinger is tested with getprotobyname("icmp") and it is null if inetutils-ping is missing
 # To be able to use DGRAM to send ICMP messages we have to give the java binary CAP_NET_RAW capabilities in Linux.
 RUN apt-get update && \
-    DEBIAN_FRONTEND="noninteractive" apt-get install --no-install-recommends -y curl ca-certificates openssh-client inetutils-ping libcap2-bin tzdata && \
     DEBIAN_FRONTEND="noninteractive" apt-get install --no-install-recommends -y "${JAVA_PKG}" && \
     ln -s /usr/lib/jvm/java-11-openjdk* "${JAVA_HOME}" && \
     rm -rf /var/lib/apt/lists/* && \
     apt-get clean && \
     rm -rf /var/cache/apt && \
+    \
     mkdir -p /opt/prom-jmx-exporter && \
     curl "${PROM_JMX_EXPORTER_URL}" --output /opt/prom-jmx-exporter/jmx_prometheus_javaagent.jar
 

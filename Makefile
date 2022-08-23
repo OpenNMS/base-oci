@@ -10,7 +10,7 @@
 
 SHELL                     := bash -o nounset -o pipefail -o errexit
 BUILD_DATE                := $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
-BASE_IMAGE                := ubuntu:focal
+BASE_IMAGE                := ubuntu:jammy
 
 DOCKER_CLI_EXPERIMENTAL   := enabled
 ARCHITECTURE              := linux/amd64
@@ -35,7 +35,7 @@ BUILD_URL                 ?= unset
 BUILD_BRANCH              ?= $(shell git branch --show-current)
 
 JAVA_MAJOR_VERSION        := 11
-JAVA_PKG_VERSION          := 11.0.16+8-0ubuntu1~20.04
+JAVA_PKG_VERSION          := 11.0.16+8-0ubuntu1~22.04
 JAVA_PKG                  := openjdk-$(JAVA_MAJOR_VERSION)-jre-headless=$(JAVA_PKG_VERSION)
 JAVA_HOME                 := /usr/lib/jvm/java
 

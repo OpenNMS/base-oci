@@ -45,7 +45,6 @@ JICMP_VERSION             := jicmp-3.0.0-2
 JICMP6_GIT_REPO_URL       := https://github.com/opennms/jicmp6
 JICMP6_VERSION            := jicmp6-3.0.0-2
 
-GOPATH                    := /root/go
 CONFD_SOURCE              := https://github.com/kelseyhightower/confd.git
 CONFD_VERSION             := 0.16.0
 

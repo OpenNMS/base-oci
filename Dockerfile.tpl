@@ -34,23 +34,15 @@ FROM core as third-party-base
 ##
 # build confd using older golang, since 1.18 is incompatible with CircleCI docker's pthread support
 ##
-FROM ubuntu:focal as confd-build
+FROM cimg/go:1.10 as confd-build
 
-ARG GOPATH=/root/go
+ARG GOPATH=/tmp/go
 
-RUN apt-get update && \
-    env DEBIAN_FRONTEND="noninteractive" apt-get install --no-install-recommends -y \
-      ca-certificates \
-      git-core \
-      golang \
-      make \
-      tzdata \
-    && \
-    mkdir -p "${GOPATH}/src/github.com/kelseyhightower" && \
+RUN mkdir -p "${GOPATH}/src/github.com/kelseyhightower" && \
     git clone --depth 1 --branch "v${CONFD_VERSION}" "${CONFD_SOURCE}" "${GOPATH}/src/github.com/kelseyhightower/confd" && \
     cd "${GOPATH}/src/github.com/kelseyhightower/confd" && \
     make && \
-    make install
+    sudo make install
 
 ##
 # Pre-stage image to build jicmp and jicmp6

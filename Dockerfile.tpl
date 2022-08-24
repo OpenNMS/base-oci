@@ -53,7 +53,9 @@ RUN mkdir -p "${GOPATH}/src/github.com/kelseyhightower" && \
     git clone --depth 1 --branch "v${CONFD_VERSION}" "${CONFD_SOURCE}" "${GOPATH}/src/github.com/kelseyhightower/confd" && \
     cd "${GOPATH}/src/github.com/kelseyhightower/confd" && \
     go mod init && \
-    sed -i -e 's,-ldflags,-mod=mod -ldflags,g' Makefile && \
+    go mod tidy -e -compat=1.10 && \
+    ( go mod vendor 2>&1 | grep 'go get ' | while read LINE; do sh -c "$LINE"; done ) && \
+    go mod vendor && \
     make && \
     make install
 

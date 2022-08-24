@@ -12,6 +12,7 @@ SHELL                     := bash -o nounset -o pipefail -o errexit
 BUILD_DATE                := $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 BASE_IMAGE                := ubuntu:jammy
 
+DOCKER_BUILDKIT           := 1
 DOCKER_CLI_EXPERIMENTAL   := enabled
 ARCHITECTURE              := linux/amd64
 BUILDER_INSTANCE          := env-deploy-base-oci
@@ -110,7 +111,7 @@ builder-instance: dep
 oci: Dockerfile builder-instance
 	@echo "Build container image for architecture: $(ARCHITECTURE) ..."
 	@mkdir -p artifacts
-	@docker buildx build --output=type=docker,dest=artifacts/$(TAG_PROJECT)-$(TAG_ARCH).oci --platform="$(ARCHITECTURE)" --tag=$(TAG_PROJECT):$(TAG_ARCH) $(DOCKER_FLAGS) . ;
+	@docker buildx build --progress=plain --output=type=docker,dest=artifacts/$(TAG_PROJECT)-$(TAG_ARCH).oci --platform="$(ARCHITECTURE)" --tag=$(TAG_PROJECT):$(TAG_ARCH) $(DOCKER_FLAGS) . ;
 
 install: oci
 	@echo "Load image ..."

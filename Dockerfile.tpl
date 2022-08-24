@@ -36,11 +36,11 @@ FROM core as third-party-base
 ##
 FROM cimg/go:1.10 as confd-build
 
-ARG GOPATH=/tmp/go
-
-RUN mkdir -p "${GOPATH}/src/github.com/kelseyhightower" && \
-    git clone --depth 1 --branch "v${CONFD_VERSION}" "${CONFD_SOURCE}" "${GOPATH}/src/github.com/kelseyhightower/confd" && \
-    cd "${GOPATH}/src/github.com/kelseyhightower/confd" && \
+RUN git config --global advice.detachedHead false
+RUN go get -v github.com/kelseyhightower/confd
+RUN cd ~/go/src/github.com/kelseyhightower/confd && \
+    git reset --hard v"${CONFD_VERSION}" && \
+    go version && \
     make && \
     sudo make install
 
@@ -60,6 +60,9 @@ RUN apt-get update && \
 
 # Install build dependencies for JICMP and JICMP6
 # Checkout and build JICMP
+    
+RUN git config --global advice.detachedHead false
+
 RUN git clone --depth 1 --branch "${JICMP_VERSION}" "${JICMP_GIT_REPO_URL}" /usr/src/jicmp && \
     cd /usr/src/jicmp && \
     git submodule update --init --recursive --depth 1 && \

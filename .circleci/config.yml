@@ -12,7 +12,7 @@ aliases:
       echo "export CONTAINER_REGISTRY_LOGIN=${DOCKERHUB_LOGIN}"
       echo "export CONTAINER_REGISTRY_PASS=${DOCKERHUB_PASS}"
       echo "export IMAGE=${DOCKER_REGISTRY}/${DOCKER_ORG}/deploy-base" >> $BASH_ENV
-      echo "export VERSION=jre-2.0.0.b<< pipeline.number >>" >> $BASH_ENV
+      echo "export VERSION=jre-2.0.2.b<< pipeline.number >>" >> $BASH_ENV
     environment:
       DOCKER_REGISTRY: docker.io
       DOCKER_ORG: opennms

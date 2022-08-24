@@ -29,40 +29,42 @@ RUN apt-get update && \
     apt-get clean && \
     rm -rf /var/cache/apt /var/lib/apt/lists/* /tmp/security.sources.list
 
-##
-# create a "base" image for 3rd-party builds of confd, jicmp, and jicmp6
-##
 FROM core as third-party-base
 
-RUN apt-get update && \
-    env DEBIAN_FRONTEND="noninteractive" apt-get install --no-install-recommends -y \
-        build-essential \
-        dh-autoreconf \
-        golang \
-        git-core \
-        make \
-    && \
-    env DEBIAN_FRONTEND="noninteractive" apt-get install --no-install-recommends -y \
-        openjdk-8-jdk-headless
-
-FROM third-party-base as confd-build
+##
+# build confd using older golang, since 1.18 is incompatible with CircleCI docker's pthread support
+##
+FROM ubuntu:focal as confd-build
 
 ARG GOPATH=/root/go
 
-RUN mkdir -p "${GOPATH}/src/github.com/kelseyhightower" && \
+RUN apt-get update && \
+    env DEBIAN_FRONTEND="noninteractive" apt-get install --no-install-recommends -y \
+      ca-certificates \
+      git-core \
+      golang \
+      make \
+      tzdata \
+    && \
+    mkdir -p "${GOPATH}/src/github.com/kelseyhightower" && \
     git clone --depth 1 --branch "v${CONFD_VERSION}" "${CONFD_SOURCE}" "${GOPATH}/src/github.com/kelseyhightower/confd" && \
     cd "${GOPATH}/src/github.com/kelseyhightower/confd" && \
-    go mod init && \
-    go mod tidy -e -compat=1.10 && \
-    ( go mod vendor 2>&1 | grep 'go get ' | while read LINE; do sh -c "$LINE"; done ) && \
-    go mod vendor && \
     make && \
     make install
 
 ##
 # Pre-stage image to build jicmp and jicmp6
 ##
-FROM third-party-base as jicmp-build
+FROM core as jicmp-build
+
+RUN apt-get update && \
+    env DEBIAN_FRONTEND="noninteractive" apt-get install --no-install-recommends -y \
+        build-essential \
+        dh-autoreconf \
+        git-core \
+    && \
+    env DEBIAN_FRONTEND="noninteractive" apt-get install --no-install-recommends -y \
+        openjdk-8-jdk-headless
 
 # Install build dependencies for JICMP and JICMP6
 # Checkout and build JICMP

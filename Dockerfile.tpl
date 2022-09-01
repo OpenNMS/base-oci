@@ -49,7 +49,8 @@ RUN cd ~/go/src/github.com/kelseyhightower/confd && \
     git reset --hard v"${CONFD_VERSION}" && \
     go version && \
     make && \
-    make install
+    make install && \
+    mv /usr/local/bin/confd /usr/bin/
 
 ##
 # Pre-stage image to build jicmp and jicmp6

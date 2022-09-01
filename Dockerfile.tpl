@@ -107,7 +107,7 @@ RUN apt-get update && \
     curl "${PROM_JMX_EXPORTER_URL}" --output /opt/prom-jmx-exporter/jmx_prometheus_javaagent.jar
 
 # Install confd
-COPY --from=confd-build /usr/local/bin/confd /usr/local/bin/confd
+COPY --from=confd-build /usr/bin/confd /usr/bin/confd
 
 # Install jicmp
 RUN mkdir -p /usr/lib/jni

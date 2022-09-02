@@ -104,7 +104,9 @@ RUN apt-get update && \
     rm -rf /var/cache/apt && \
     \
     mkdir -p /opt/prom-jmx-exporter && \
-    curl "${PROM_JMX_EXPORTER_URL}" --output /opt/prom-jmx-exporter/jmx_prometheus_javaagent.jar
+    curl "${PROM_JMX_EXPORTER_URL}" --output /opt/prom-jmx-exporter/jmx_prometheus_javaagent.jar && \
+    \
+    setcap CAP_NET_BIND_SERVICE+ep "${JAVA_HOME}/bin/java"
 
 # Install confd
 COPY --from=confd-build /usr/bin/confd /usr/bin/confd

@@ -106,7 +106,7 @@ RUN apt-get update && \
     mkdir -p /opt/prom-jmx-exporter && \
     curl "${PROM_JMX_EXPORTER_URL}" --output /opt/prom-jmx-exporter/jmx_prometheus_javaagent.jar && \
     \
-    setcap CAP_NET_BIND_SERVICE+ep "${JAVA_HOME}/bin/java" &&
+    setcap CAP_NET_BIND_SERVICE+ep "${JAVA_HOME}/bin/java" && \
     echo "${JAVA_HOME}/lib/jli" > /etc/ld.so.conf.d/java-latest.conf && \
     ldconfig
 

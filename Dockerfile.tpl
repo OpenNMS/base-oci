@@ -124,8 +124,6 @@ COPY --from=jicmp-build /usr/src/jicmp6/.libs/libjicmp6.la /usr/lib/jni/
 COPY --from=jicmp-build /usr/src/jicmp6/.libs/libjicmp6.so /usr/lib/jni/
 COPY --from=jicmp-build /usr/src/jicmp6/jicmp6.jar /usr/share/java
 
-RUN curl -L https://github.com/jwilder/dockerize/releases/download/v0.6.1/dockerize-linux-amd64-v0.6.1.tar.gz --output /tmp/dockerize.tar.gz && tar -C /usr/local/bin -xzvf /tmp/dockerize.tar.gz && rm /tmp/dockerize.tar.gz
-
 LABEL org.opencontainers.image.created="${BUILD_DATE}" \
       org.opencontainers.image.title="OpenNMS deploy based on ${BASE_IMAGE}" \
       org.opencontainers.image.source="${VCS_SOURCE}" \

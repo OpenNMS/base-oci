@@ -13,9 +13,11 @@ RUN apt-get update && \
         ca-certificates \
         curl \
         inetutils-ping \
+        less \
         libcap2-bin \
         openssh-client \
         tzdata \
+        vim-tiny \
     && \
     env DEBIAN_FRONTEND="noninteractive" apt-get install --no-install-recommends -y \
         "${JAVA_PKG}" \

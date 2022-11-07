@@ -94,6 +94,8 @@ RUN apt-get update && \
 # Install confd
 RUN if [ "$(uname -m)" = "x86_64" ]; then \
       curl -L "https://github.com/abtreece/confd/releases/download/v0.19.1/confd-v0.19.1-linux-amd64.tar.gz" --output /tmp/confd.tar.gz; \
+    elif [ "$(uname -m)" = "armv7l" ]; then \
+      curl -L "https://github.com/abtreece/confd/releases/download/v0.19.1/confd-v0.19.1-linux-arm7.tar.gz" --output /tmp/confd.tar.gz; \
     else \
       curl -L "https://github.com/abtreece/confd/releases/download/v0.19.1/confd-v0.19.1-linux-arm64.tar.gz" --output /tmp/confd.tar.gz; \
     fi && \

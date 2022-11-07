@@ -34,27 +34,6 @@ RUN apt-get update && \
 FROM core as third-party-base
 
 ##
-# build confd using older golang, since 1.18 is incompatible with CircleCI docker's pthread support
-##
-FROM ubuntu:focal as confd-build
-
-RUN apt-get update && \
-    env DEBIAN_FRONTEND="noninteractive" apt-get install --no-install-recommends -y \
-        build-essential \
-        ca-certificates \
-        git-core \
-        golang
-
-RUN git config --global advice.detachedHead false
-RUN go get -v github.com/kelseyhightower/confd
-RUN cd ~/go/src/github.com/kelseyhightower/confd && \
-    git reset --hard v"${CONFD_VERSION}" && \
-    go version && \
-    make && \
-    make install && \
-    mv /usr/local/bin/confd /usr/bin/
-
-##
 # Pre-stage image to build jicmp and jicmp6
 ##
 FROM core as jicmp-build
@@ -113,7 +92,13 @@ RUN apt-get update && \
     ldconfig
 
 # Install confd
-COPY --from=confd-build /usr/bin/confd /usr/bin/confd
+RUN if [ "$(uname -m)" = "x86_64" ]; then \
+      curl -L "https://github.com/abtreece/confd/releases/download/v0.19.1/confd-v0.19.1-linux-amd64.tar.gz" --output /tmp/confd.tar.gz; \
+    else \
+      curl -L "https://github.com/abtreece/confd/releases/download/v0.19.1/confd-v0.19.1-linux-arm64.tar.gz" --output /tmp/confd.tar.gz; \
+    fi && \
+    cd /usr/bin && \
+    tar -xzf /tmp/confd.tar.gz
 
 # Install jicmp
 RUN mkdir -p /usr/lib/jni

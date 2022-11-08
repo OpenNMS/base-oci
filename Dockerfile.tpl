@@ -19,6 +19,7 @@ RUN apt-get update && \
         tzdata \
         vim-tiny \
     && \
+    ln -sf vi /usr/bin/vim && \
     env DEBIAN_FRONTEND="noninteractive" apt-get install --no-install-recommends -y \
         "${JAVA_PKG}" \
     && \

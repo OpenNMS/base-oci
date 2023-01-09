@@ -1,7 +1,7 @@
 # Deploy Base Image
 
-This image is used as a base for Minion Docker containers running in production.
-The goal is to provide a small cacheable image which satisfies the dependencies required from the Minion software.
+This image is used as a base for Horizon, Minion, and Sentinel Docker containers running in production.
+The goal is to provide a small cacheable image which satisfies the dependencies required from the core software.
 
 It provides the following major dependencies:
 

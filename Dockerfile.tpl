@@ -16,6 +16,7 @@ RUN apt-get update && \
         less \
         libcap2-bin \
         openssh-client \
+        rsync \
         tzdata \
         vim-tiny \
     && \

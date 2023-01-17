@@ -12,7 +12,7 @@ aliases:
       echo "export CONTAINER_REGISTRY_LOGIN='${DOCKERHUB_LOGIN}'" >> $BASH_ENV
       echo "export CONTAINER_REGISTRY_PASS='${DOCKERHUB_PASS}'" >> $BASH_ENV
       echo "export IMAGE=${DOCKER_REGISTRY}/${DOCKER_ORG}/deploy-base" >> $BASH_ENV
-      echo "export VERSION=ubuntu-$(cat version.txt | sed -e 's,[\r\n]*,,').b<< pipeline.number >>" >> $BASH_ENV
+      echo "export VERSION=ubi9-$(cat version.txt | sed -e 's,[\r\n]*,,').b<< pipeline.number >>" >> $BASH_ENV
     environment:
       DOCKER_REGISTRY: docker.io
       DOCKER_ORG: opennms
@@ -124,7 +124,6 @@ jobs:
             docker manifest create ${IMAGE_REF} \
               ${IMAGE_REF}-amd64 \
               ${IMAGE_REF}-arm64 \
-              ${IMAGE_REF}-arm-v7 \
               --amend
             SHA_256="$(docker manifest push "${IMAGE_REF}" --purge | cut -d ':' -f 2)"
             echo "Manifest SHA-256: ${SHA_256}"
@@ -155,17 +154,17 @@ workflows:
       - local-oci-build:
           matrix:
             parameters:
-              architecture: [linux/amd64,linux/arm64,linux/arm/v7]
+              architecture: [linux/amd64,linux/arm64]
               jdk: ["11", "17"]
           filters:
             branches:
               ignore:
                 - master
-                - ranger/multi-jdk
+                - ranger/ubi
       - publish-single-arch:
           matrix:
             parameters:
-              architecture: [linux/amd64,linux/arm64,linux/arm/v7]
+              architecture: [linux/amd64,linux/arm64]
               jdk: ["11", "17"]
           context:
             - "docker-content-trust"
@@ -174,7 +173,7 @@ workflows:
             branches:
               only:
                 - master
-                - ranger/multi-jdk
+                - ranger/ubi
       - publish-multi-arch:
           matrix:
             parameters:
@@ -188,4 +187,4 @@ workflows:
             branches:
               only:
                 - master
-                - ranger/multi-jdk
+                - ranger/ubi

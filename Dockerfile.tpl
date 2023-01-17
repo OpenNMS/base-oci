@@ -1,33 +1,24 @@
 ##
-# do some common things that all layers use, on top of the Ubuntu base; also
+# do some common things that all layers use, on top of the UBI base; also
 # make sure security updates are installed
 ##
 FROM ${BASE_IMAGE} as core
 
 # We need to install inetutils-ping to get the JNI Pinger to work.
 # The JNI Pinger is tested with getprotobyname("icmp") and it is null if inetutils-ping is missing.
-RUN apt-get update && \
-    env DEBIAN_FRONTEND="noninteractive" apt-get install --no-install-recommends -y \
-        ca-certificates \
-        curl \
-        gnupg \
-        inetutils-ping \
+RUN microdnf -y upgrade && \
+    microdnf install -y \
+        hostname \
+        iputils \
         less \
-        libcap2-bin \
-        openssh-client \
+        openssh-clients \
         rsync \
-        tzdata \
-        vim-tiny \
+        tar \
+        uuid \
+        vim-minimal \
     && \
-    ln -sf vi /usr/bin/vim && \
-    grep security /etc/apt/sources.list > /tmp/security.sources.list && \
-    apt-get update \
-        -o Dir::Etc::SourceList=/tmp/security.sources.list && \
-    env DEBIAN_FRONTEND="noninteractive" apt-get full-upgrade \
-        --no-install-recommends -y -u \
-        -o Dir::Etc::SourceList=/tmp/security.sources.list && \
-    apt-get clean && \
-    rm -rf /var/cache/apt /var/lib/apt/lists/* /tmp/security.sources.list
+    rm -rf /var/cache/yum && \
+    ln -sf vim /usr/bin/vi
 
 FROM core as third-party-base
 
@@ -36,16 +27,17 @@ FROM core as third-party-base
 ##
 FROM core as jicmp-build
 
-RUN apt-get update && \
-    env DEBIAN_FRONTEND="noninteractive" apt-get install --no-install-recommends -y \
-        build-essential \
-        dh-autoreconf \
-        git-core \
-        openjdk-8-jdk-headless
-
 # Install build dependencies for JICMP and JICMP6
+RUN microdnf -y install \
+    autoconf \
+    automake \
+    gcc \
+    git \
+    java-1.8.0-openjdk-devel \
+    libtool \
+    make
+
 # Checkout and build JICMP
-    
 RUN git config --global advice.detachedHead false
 
 RUN git clone --depth 1 --branch "${JICMP_VERSION}" "${JICMP_GIT_REPO_URL}" /usr/src/jicmp && \
@@ -68,13 +60,10 @@ RUN cd /usr/src/jicmp6 && make -j1
 ##
 FROM core
 
-# Install OpenJDK and create an architecture independent Java directory which can be used as Java Home.
-# To be able to use DGRAM to send ICMP messages we have to give the java binary CAP_NET_RAW capabilities in Linux.
-RUN apt-get update && \
-    env DEBIAN_FRONTEND="noninteractive" apt-get install --no-install-recommends -y "${JAVA_PKG}" && \
-    ln -s /usr/lib/jvm/java-${JAVA_MAJOR_VERSION}-openjdk* "${JAVA_HOME}" && \
-    apt-get clean && \
-    rm -rf /var/cache/apt /var/lib/apt/lists/*
+RUN microdnf -y install \
+        "java-${JAVA_MAJOR_VERSION}-openjdk-headless" \
+    && \
+    rm -rf /var/cache/yum
 
 # Preserve a pristine copy of the Java binaries before we apply setcap
 # Symlink to the other resources vs copying to keep the container image smaller
@@ -87,6 +76,7 @@ RUN mkdir -p "/usr/lib/jvm/java-nocap" && \
     ln -s "${JAVA_HOME}/man" "/usr/lib/jvm/java-nocap/man" && \
     ln -s "${JAVA_HOME}/release" "/usr/lib/jvm/java-nocap/release"
 
+# To be able to use DGRAM to send ICMP messages we have to give the java binary CAP_NET_RAW capabilities in Linux.
 RUN setcap CAP_NET_BIND_SERVICE+ep "${JAVA_HOME}/bin/java" && \
     echo "${JAVA_HOME}/lib/jli" > /etc/ld.so.conf.d/java-latest.conf && \
     ldconfig
@@ -116,12 +106,9 @@ COPY --from=jicmp-build /usr/src/jicmp6/jicmp6.jar /usr/share/java
 RUN mkdir -p /opt/prom-jmx-exporter && \
     curl "${PROM_JMX_EXPORTER_URL}" --output /opt/prom-jmx-exporter/jmx_prometheus_javaagent.jar 
 
-# Prevent setup prompt
-ENV DEBIAN_FRONTEND=noninteractive
-
-# Set up OpenNMS stable repository
-RUN curl -fsSL https://debian.opennms.org/OPENNMS-GPG-KEY | gpg --dearmor -o /usr/share/keyrings/opennms.gpg && \
-    echo "deb [signed-by=/usr/share/keyrings/opennms.gpg] https://debian.opennms.org stable main" | tee /etc/apt/sources.list.d/opennms.list
+RUN curl -L --output /tmp/repo.rpm https://yum.opennms.org/repofiles/opennms-repo-stable-rhel9.noarch.rpm && \
+    rpm -Uf /tmp/repo.rpm && \
+    rpm --import https://yum.opennms.org/OPENNMS-GPG-KEY
 
 LABEL org.opencontainers.image.created="${BUILD_DATE}" \
       org.opencontainers.image.title="OpenNMS deploy based on ${BASE_IMAGE}" \

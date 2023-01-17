@@ -10,7 +10,7 @@
 
 SHELL                     := bash -o nounset -o pipefail -o errexit
 BUILD_DATE                := $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
-BASE_IMAGE                := ubuntu:jammy
+BASE_IMAGE                := redhat/ubi9-minimal
 
 DOCKER_BUILDKIT           := 1
 DOCKER_CLI_EXPERIMENTAL   := enabled
@@ -20,11 +20,11 @@ TAG_ARCH                  := $(subst /,-,$(subst linux/,,$(ARCHITECTURE)))
 
 JAVA_MAJOR_VERSION        := 11
 JAVA_PKG                  := openjdk-$(JAVA_MAJOR_VERSION)-jre-headless
-JAVA_HOME                 := /usr/lib/jvm/java
+JAVA_HOME                  = /usr/lib/jvm/jre-${JAVA_MAJOR_VERSION}
 
 # Version fallback uses the latest git version tag or the git hash if no git version is set.
 # e.g. last git version tag is v1.1.0 -> 1.1.0 is used, otherwise the git hash
-VERSION                   ?= $(shell cat version.txt | sed -e 's,[\r\n]*,,')
+VERSION                   ?= ubi9-$(shell cat version.txt | sed -e 's,[\r\n]*,,')
 CONTAINER_REGISTRY        ?= localhost
 CONTAINER_REGISTRY_LOGIN  ?= unset
 CONTAINER_REGISTRY_PASS   ?= unset

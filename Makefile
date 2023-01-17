@@ -18,6 +18,10 @@ ARCHITECTURE              := linux/amd64
 BUILDER_INSTANCE          := env-deploy-base-oci
 TAG_ARCH                  := $(subst /,-,$(subst linux/,,$(ARCHITECTURE)))
 
+JAVA_MAJOR_VERSION        := 11
+JAVA_PKG                  := openjdk-$(JAVA_MAJOR_VERSION)-jre-headless
+JAVA_HOME                 := /usr/lib/jvm/java
+
 # Version fallback uses the latest git version tag or the git hash if no git version is set.
 # e.g. last git version tag is v1.1.0 -> 1.1.0 is used, otherwise the git hash
 VERSION                   ?= $(subst v,,$(shell git describe --abbrev=0 --tags --always))
@@ -26,7 +30,8 @@ CONTAINER_REGISTRY_LOGIN  ?= unset
 CONTAINER_REGISTRY_PASS   ?= unset
 TAG_ORG                   ?= unset
 TAG_PROJECT               ?= deploy-base
-TAG_OCI                   := $(CONTAINER_REGISTRY)/$(TAG_ORG)/$(TAG_PROJECT):$(VERSION)-$(TAG_ARCH)
+TAG_LABEL                 := jre-$(JAVA_MAJOR_VERSION)-$(TAG_ARCH)
+TAG_OCI                   := $(CONTAINER_REGISTRY)/$(TAG_ORG)/$(TAG_PROJECT):$(VERSION)-$(TAG_LABEL)
 DOCKER_FLAGS              := 
 
 VCS_SOURCE                := $(shell git remote get-url origin)
@@ -34,11 +39,6 @@ VCS_REVISION              := $(shell git describe --always)
 BUILD_NUMBER              ?= unset
 BUILD_URL                 ?= unset
 BUILD_BRANCH              ?= $(shell git branch --show-current)
-
-JAVA_MAJOR_VERSION        := 11
-JAVA_PKG_VERSION          := 11.0.16+8-0ubuntu1~22.04
-JAVA_PKG                  := openjdk-$(JAVA_MAJOR_VERSION)-jre-headless=$(JAVA_PKG_VERSION)
-JAVA_HOME                 := /usr/lib/jvm/java
 
 JICMP_GIT_REPO_URL        := https://github.com/opennms/jicmp
 JICMP_VERSION             := jicmp-3.0.0-2
@@ -102,7 +102,11 @@ dep:
 
 Dockerfile: dep
 	@echo "Generate Dockerfile from template"
-	envsubst < "Dockerfile.tpl" > "Dockerfile"
+	@echo "##" > Dockerfile
+	@echo "# DO NOT EDIT: This file is generated from the Dockerfile.tpl" >> Dockerfile
+	@echo "##" >> Dockerfile
+	@echo "" >> Dockerfile
+	envsubst < "Dockerfile.tpl" >> "Dockerfile"
 
 builder-instance: dep
 	@if ! docker buildx inspect "$(BUILDER_INSTANCE)"; then docker buildx create --name "$(BUILDER_INSTANCE)"; fi;
@@ -111,21 +115,21 @@ builder-instance: dep
 oci: Dockerfile builder-instance
 	@echo "Build container image for architecture: $(ARCHITECTURE) ..."
 	@mkdir -p artifacts
-	@docker buildx build --progress=plain --output=type=docker,dest=artifacts/$(TAG_PROJECT)-$(TAG_ARCH).oci --platform="$(ARCHITECTURE)" --tag=$(TAG_PROJECT):$(TAG_ARCH) $(DOCKER_FLAGS) . ;
+	@docker buildx build --progress=plain --output=type=docker,dest=artifacts/$(TAG_PROJECT)-$(TAG_LABEL).oci --platform="$(ARCHITECTURE)" --tag=$(TAG_PROJECT):$(TAG_LABEL) $(DOCKER_FLAGS) . ;
 
 install: oci
 	@echo "Load image ..."
-	@docker image load -i artifacts/$(TAG_PROJECT)-$(TAG_ARCH).oci;
+	@docker image load -i artifacts/$(TAG_PROJECT)-$(TAG_LABEL).oci;
 
 tag: install
 	@echo "Tag Docker image ..."
-	@docker tag $(TAG_PROJECT):$(TAG_ARCH) $(TAG_OCI)
+	@docker tag $(TAG_PROJECT):$(TAG_LABEL) $(TAG_OCI)
 
 login: dep
 	@echo "Login to ${CONTAINER_REGISTRY}: "
 	@echo "${CONTAINER_REGISTRY_PASS}" | docker login ${CONTAINER_REGISTRY} -u "${CONTAINER_REGISTRY_LOGIN}" --password-stdin > /dev/null
 
-publish: oci tag login
+publish: oci tag
 	@echo -n "Verify image tag in registry for $(TAG_OCI) ... "
 	@if docker manifest inspect "$(TAG_OCI)" >/dev/null; then echo -e "\033[0;31mFAIL\033[0m"; echo "Image tag already published on registry."; exit 1; fi;
 	@echo "Push Docker image to registry: $(TAG_OCI) ..."
@@ -133,7 +137,7 @@ publish: oci tag login
 
 uninstall: dep
 	@echo "Remove image ..."
-	@docker rmi $(TAG_PROJECT):$(TAG_ARCH) || exit 0
+	@docker rmi $(TAG_PROJECT):$(TAG_LABEL) || exit 0
 	@docker rmi $(TAG_OCI) || exit 0
 
 clean: uninstall

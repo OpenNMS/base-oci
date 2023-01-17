@@ -9,10 +9,10 @@ aliases:
       echo "export DOCKER_ORG=${DOCKER_ORG}" >> $BASH_ENV
       echo "export DOCKER_CONTENT_TRUST=1" >> $BASH_ENV
       echo "export DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE=\"$DCT_DELEGATE_KEY_PASSPHRASE\"" >> $BASH_ENV
-      echo "export CONTAINER_REGISTRY_LOGIN=${DOCKERHUB_LOGIN}"
-      echo "export CONTAINER_REGISTRY_PASS=${DOCKERHUB_PASS}"
+      echo "export CONTAINER_REGISTRY_LOGIN='${DOCKERHUB_LOGIN}'" >> $BASH_ENV
+      echo "export CONTAINER_REGISTRY_PASS='${DOCKERHUB_PASS}'" >> $BASH_ENV
       echo "export IMAGE=${DOCKER_REGISTRY}/${DOCKER_ORG}/deploy-base" >> $BASH_ENV
-      echo "export VERSION=jre-2.1.0.b<< pipeline.number >>" >> $BASH_ENV
+      echo "export VERSION=ubuntu-3.0.0.b<< pipeline.number >>" >> $BASH_ENV
     environment:
       DOCKER_REGISTRY: docker.io
       DOCKER_ORG: opennms
@@ -33,8 +33,10 @@ jobs:
     parameters:
       architecture:
         type: string
+      jdk:
+        type: string
     machine:
-      image: ubuntu-2204:2022.07.1
+      image: ubuntu-2204:current
     environment:
       DOCKER_CLI_EXPERIMENTAL: enabled
     steps:
@@ -45,7 +47,9 @@ jobs:
       - run:
           name: Single-arch build
           command: |
-            make oci ARCHITECTURE="<< parameters.architecture >>"
+            make oci \
+              ARCHITECTURE="<< parameters.architecture >>" \
+              JAVA_MAJOR_VERSION="<< parameters.jdk >>"
       - store_artifacts:
           path: ~/project/artifacts/
           destination: /
@@ -54,30 +58,10 @@ jobs:
     parameters:
       architecture:
         type: string
+      jdk:
+        type: string
     machine:
-      image: ubuntu-2204:2022.07.1
-    environment:
-      DOCKER_CLI_EXPERIMENTAL: enabled
-    steps:
-      - checkout
-      - run: *setup_dct_env
-      - run: *load_dct_keys
-      - run:
-          name: multiarch/qemu-user-static
-          command: DOCKER_CONTENT_TRUST=0 docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
-      - run:
-          name: Push single-arch OCI
-          command: |
-            make publish ARCHITECTURE="<< parameters.architecture >>" \
-              CONTAINER_REGISTRY="${DOCKER_REGISTRY}" \
-              TAG_ORG="${DOCKER_ORG}" \
-              CONTAINER_REGISTRY_LOGIN="${DOCKERHUB_LOGIN}" \
-              CONTAINER_REGISTRY_PASS="${DOCKERHUB_PASS}" \
-              VERSION=${VERSION}
-
-  publish-multi-arch:
-    machine:
-      image: ubuntu-2204:2022.07.1
+      image: ubuntu-2204:current
     environment:
       DOCKER_CLI_EXPERIMENTAL: enabled
     steps:
@@ -87,7 +71,38 @@ jobs:
       - run:
           name: Login to DockerHub
           command: |
-            docker login -u ${DOCKERHUB_LOGIN} -p ${DOCKERHUB_PASS}
+            docker login -u "${DOCKERHUB_LOGIN}" -p "${DOCKERHUB_PASS}"
+      - run:
+          name: multiarch/qemu-user-static
+          command: DOCKER_CONTENT_TRUST=0 docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+      - run:
+          name: Push single-arch OCI
+          command: |
+            make publish \
+              ARCHITECTURE="<< parameters.architecture >>" \
+              JAVA_MAJOR_VERSION="<< parameters.jdk >>" \
+              CONTAINER_REGISTRY="${DOCKER_REGISTRY}" \
+              TAG_ORG="${DOCKER_ORG}" \
+              CONTAINER_REGISTRY_LOGIN="${DOCKERHUB_LOGIN}" \
+              CONTAINER_REGISTRY_PASS="${DOCKERHUB_PASS}" \
+              VERSION=${VERSION}
+
+  publish-multi-arch:
+    parameters:
+      jdk:
+        type: string
+    machine:
+      image: ubuntu-2204:current
+    environment:
+      DOCKER_CLI_EXPERIMENTAL: enabled
+    steps:
+      - checkout
+      - run: *setup_dct_env
+      - run: *load_dct_keys
+      - run:
+          name: Login to DockerHub
+          command: |
+            docker login -u "${DOCKERHUB_LOGIN}" -p "${DOCKERHUB_PASS}"
       - run:
           name: Install notary
           command: |
@@ -104,7 +119,8 @@ jobs:
       - run:
           name: Create & push multi-arch manifest
           command: |
-            IMAGE_REF="${IMAGE}:${VERSION}"
+            JAVA_MAJOR_VERSION="<< parameters.jdk >>"
+            IMAGE_REF="${IMAGE}:${VERSION}-jre-${JAVA_MAJOR_VERSION}"
             docker manifest create ${IMAGE_REF} \
               ${IMAGE_REF}-amd64 \
               ${IMAGE_REF}-arm64 \
@@ -114,7 +130,7 @@ jobs:
             echo "Manifest SHA-256: ${SHA_256}"
             echo "Image-Ref: ${IMAGE_REF}"
             MANIFEST_FROM_REG="$(docker manifest inspect "${IMAGE_REF}" -v)";
-            BYTES_SIZE="$(printf "${MANIFEST_FROM_REG}" | jq -r '.[].Descriptor.size' | uniq)";
+            BYTES_SIZE="$(printf "${MANIFEST_FROM_REG}" | jq -r '.[].Descriptor.size' | sort -nr | head -n1)";
             echo "Manifest-inspect BYTES: ${BYTES_SIZE}";
             echo "Manifest contents:\n";
             printf "${MANIFEST_FROM_REG}" | jq -r '.[].Descriptor | "Architecture: " + .platform.architecture + .platform.variant + ", digest: " + .digest';
@@ -140,21 +156,36 @@ workflows:
           matrix:
             parameters:
               architecture: [linux/amd64,linux/arm64,linux/arm/v7]
+              jdk: ["11", "17"]
           filters:
             branches:
-              ignore: master
+              ignore:
+                - master
+                - ranger/multi-jdk
       - publish-single-arch:
           matrix:
             parameters:
               architecture: [linux/amd64,linux/arm64,linux/arm/v7]
-          context: "docker-content-trust"
+              jdk: ["11", "17"]
+          context:
+            - "docker-content-trust"
+            - "docker-publish-account"
           filters:
             branches:
-              only: master
+              only:
+                - master
+                - ranger/multi-jdk
       - publish-multi-arch:
-          context: "docker-content-trust"
+          matrix:
+            parameters:
+              jdk: ["11", "17"]
+          context:
+            - "docker-content-trust"
+            - "docker-publish-account"
           requires:
             - publish-single-arch
           filters:
             branches:
-              only: master
+              only:
+                - master
+                - ranger/multi-jdk

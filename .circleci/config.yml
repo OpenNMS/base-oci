@@ -12,7 +12,7 @@ aliases:
       echo "export CONTAINER_REGISTRY_LOGIN='${DOCKERHUB_LOGIN}'" >> $BASH_ENV
       echo "export CONTAINER_REGISTRY_PASS='${DOCKERHUB_PASS}'" >> $BASH_ENV
       echo "export IMAGE=${DOCKER_REGISTRY}/${DOCKER_ORG}/deploy-base" >> $BASH_ENV
-      echo "export VERSION=ubuntu-3.0.0.b<< pipeline.number >>" >> $BASH_ENV
+      echo "export VERSION=ubuntu-$(cat version.txt | sed -e 's,[\r\n]*,,').b<< pipeline.number >>" >> $BASH_ENV
     environment:
       DOCKER_REGISTRY: docker.io
       DOCKER_ORG: opennms

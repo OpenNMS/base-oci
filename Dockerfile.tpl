@@ -116,19 +116,12 @@ COPY --from=jicmp-build /usr/src/jicmp6/jicmp6.jar /usr/share/java
 RUN mkdir -p /opt/prom-jmx-exporter && \
     curl "${PROM_JMX_EXPORTER_URL}" --output /opt/prom-jmx-exporter/jmx_prometheus_javaagent.jar 
 
-ARG REPO_KEY_URL="https://debian.opennms.org/OPENNMS-GPG-KEY"
-
 # Prevent setup prompt
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Set up OpenNMS stable repository
-RUN apt-get update && \
-    env DEBIAN_FRONTEND="noninteractive" apt-get install --no-install-recommends -y \
-    software-properties-common && \
-    echo "deb https://debian.opennms.org stable main" > /etc/apt/sources.list.d/opennms.list && \
-    add-apt-repository -y 'deb http://debian.opennms.org stable main' && \
-    apt-get clean && \
-    rm -rf /var/cache/apt /var/lib/apt/lists/*
+RUN curl -fsSL https://debian.opennms.org/OPENNMS-GPG-KEY | gpg --dearmor -o /usr/share/keyrings/opennms.gpg && \
+    echo "deb [signed-by=/usr/share/keyrings/opennms.gpg] https://debian.opennms.org stable main" | tee /etc/apt/sources.list.d/opennms.list
 
 LABEL org.opencontainers.image.created="${BUILD_DATE}" \
       org.opencontainers.image.title="OpenNMS deploy based on ${BASE_IMAGE}" \

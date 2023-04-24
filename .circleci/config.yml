@@ -160,7 +160,7 @@ workflows:
             branches:
               ignore:
                 - master
-                - ranger/ubi
+                - variant/ubi
       - publish-single-arch:
           matrix:
             parameters:
@@ -173,7 +173,7 @@ workflows:
             branches:
               only:
                 - master
-                - ranger/ubi
+                - variant/ubi
       - publish-multi-arch:
           matrix:
             parameters:
@@ -187,4 +187,4 @@ workflows:
             branches:
               only:
                 - master
-                - ranger/ubi
+                - variant/ubi

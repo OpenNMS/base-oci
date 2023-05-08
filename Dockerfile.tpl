@@ -55,7 +55,7 @@ RUN git clone --depth 1 --branch "${JICMP6_VERSION}" "${JICMP6_GIT_REPO_URL}" /u
     ./configure
 RUN cd /usr/src/jicmp6 && make -j1
 
-RUN git clone --depth 1 "https://github.com/jattach/jattach" /usr/src/jattach
+RUN git clone --depth 1 --branch "${JATTACH_VERSION}" "${JATTACH_GIT_REPO_URL}" /usr/src/jattach
 RUN cd /usr/src/jattach && make -j1
 
 ##

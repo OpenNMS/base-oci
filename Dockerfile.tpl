@@ -12,6 +12,7 @@ RUN apt-get update && \
         curl \
         gnupg \
         inetutils-ping \
+        jattach \
         less \
         libcap2-bin \
         openssh-client \

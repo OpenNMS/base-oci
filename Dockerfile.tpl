@@ -25,7 +25,7 @@ FROM core as third-party-base
 ##
 # Pre-stage image to build jicmp and jicmp6
 ##
-FROM core as jicmp-build
+FROM core as binary-build
 
 # Install build dependencies for JICMP and JICMP6
 RUN microdnf -y install \
@@ -55,8 +55,11 @@ RUN git clone --depth 1 --branch "${JICMP6_VERSION}" "${JICMP6_GIT_REPO_URL}" /u
     ./configure
 RUN cd /usr/src/jicmp6 && make -j1
 
+RUN git clone --depth 1 --branch "${JATTACH_VERSION}" "${JATTACH_GIT_REPO_URL}" /usr/src/jattach
+RUN cd /usr/src/jattach && make -j1
+
 ##
-# Assemble deploy base image with jicmp, jicmp6, confd and OpenJDK
+# Assemble deploy base image with jicmp, jicmp6, jattach, confd and OpenJDK
 ##
 FROM core
 
@@ -94,14 +97,17 @@ RUN if [ "$(uname -m)" = "x86_64" ]; then \
 
 # Install jicmp
 RUN mkdir -p /usr/lib/jni
-COPY --from=jicmp-build /usr/src/jicmp/.libs/libjicmp.la /usr/lib/jni/
-COPY --from=jicmp-build /usr/src/jicmp/.libs/libjicmp.so /usr/lib/jni/
-COPY --from=jicmp-build /usr/src/jicmp/jicmp.jar /usr/share/java
+COPY --from=binary-build /usr/src/jicmp/.libs/libjicmp.la /usr/lib/jni/
+COPY --from=binary-build /usr/src/jicmp/.libs/libjicmp.so /usr/lib/jni/
+COPY --from=binary-build /usr/src/jicmp/jicmp.jar /usr/share/java/
 
 # Install jicmp6
-COPY --from=jicmp-build /usr/src/jicmp6/.libs/libjicmp6.la /usr/lib/jni/
-COPY --from=jicmp-build /usr/src/jicmp6/.libs/libjicmp6.so /usr/lib/jni/
-COPY --from=jicmp-build /usr/src/jicmp6/jicmp6.jar /usr/share/java
+COPY --from=binary-build /usr/src/jicmp6/.libs/libjicmp6.la /usr/lib/jni/
+COPY --from=binary-build /usr/src/jicmp6/.libs/libjicmp6.so /usr/lib/jni/
+COPY --from=binary-build /usr/src/jicmp6/jicmp6.jar /usr/share/java/
+
+# Install jattach
+COPY --from=binary-build /usr/src/jattach/build/jattach /usr/bin/
 
 RUN mkdir -p /opt/prom-jmx-exporter && \
     curl "${PROM_JMX_EXPORTER_URL}" --output /opt/prom-jmx-exporter/jmx_prometheus_javaagent.jar 

@@ -20,46 +20,46 @@ RUN microdnf -y upgrade && \
     rm -rf /var/cache/yum && \
     ln -sf vim /usr/bin/vi
 
-FROM core as third-party-base
+#FROM core as third-party-base
+#
+###
+## Pre-stage image to build jicmp and jicmp6
+###
+#FROM core as binary-build
+#
+## Install build dependencies for JICMP and JICMP6
+#RUN microdnf -y install \
+#    autoconf \
+#    automake \
+#    gcc \
+#    git \
+#    java-1.8.0-openjdk-devel \
+#    libtool \
+#    make
+#
+## Checkout and build JICMP
+#RUN git config --global advice.detachedHead false
+#
+#RUN git clone --depth 1 --branch "${JICMP_VERSION}" "${JICMP_GIT_REPO_URL}" /usr/src/jicmp && \
+#    cd /usr/src/jicmp && \
+#    git submodule update --init --recursive --depth 1 && \
+#    autoreconf -fvi && \
+#    ./configure
+#RUN cd /usr/src/jicmp && make -j1
+#
+## Checkout and build JICMP6
+#RUN git clone --depth 1 --branch "${JICMP6_VERSION}" "${JICMP6_GIT_REPO_URL}" /usr/src/jicmp6 && \
+#    cd /usr/src/jicmp6 && \
+#    git submodule update --init --recursive --depth 1 && \
+#    autoreconf -fvi && \
+#    ./configure
+#RUN cd /usr/src/jicmp6 && make -j1
+#
+#RUN git clone --depth 1 --branch "${JATTACH_VERSION}" "${JATTACH_GIT_REPO_URL}" /usr/src/jattach
+#RUN cd /usr/src/jattach && make -j1
 
 ##
-# Pre-stage image to build jicmp and jicmp6
-##
-FROM core as binary-build
-
-# Install build dependencies for JICMP and JICMP6
-RUN microdnf -y install \
-    autoconf \
-    automake \
-    gcc \
-    git \
-    java-1.8.0-openjdk-devel \
-    libtool \
-    make
-
-# Checkout and build JICMP
-RUN git config --global advice.detachedHead false
-
-RUN git clone --depth 1 --branch "${JICMP_VERSION}" "${JICMP_GIT_REPO_URL}" /usr/src/jicmp && \
-    cd /usr/src/jicmp && \
-    git submodule update --init --recursive --depth 1 && \
-    autoreconf -fvi && \
-    ./configure
-RUN cd /usr/src/jicmp && make -j1
-
-# Checkout and build JICMP6
-RUN git clone --depth 1 --branch "${JICMP6_VERSION}" "${JICMP6_GIT_REPO_URL}" /usr/src/jicmp6 && \
-    cd /usr/src/jicmp6 && \
-    git submodule update --init --recursive --depth 1 && \
-    autoreconf -fvi && \
-    ./configure
-RUN cd /usr/src/jicmp6 && make -j1
-
-RUN git clone --depth 1 --branch "${JATTACH_VERSION}" "${JATTACH_GIT_REPO_URL}" /usr/src/jattach
-RUN cd /usr/src/jattach && make -j1
-
-##
-# Assemble deploy base image with jicmp, jicmp6, jattach, confd and OpenJDK
+# Assemble deploy base image with jattach, confd and OpenJDK
 ##
 FROM core
 
@@ -95,16 +95,16 @@ RUN if [ "$(uname -m)" = "x86_64" ]; then \
     cd /usr/bin && \
     tar -xzf /tmp/confd.tar.gz
 
-# Install jicmp
-RUN mkdir -p /usr/lib/jni
-COPY --from=binary-build /usr/src/jicmp/.libs/libjicmp.la /usr/lib/jni/
-COPY --from=binary-build /usr/src/jicmp/.libs/libjicmp.so /usr/lib/jni/
-COPY --from=binary-build /usr/src/jicmp/jicmp.jar /usr/share/java/
-
-# Install jicmp6
-COPY --from=binary-build /usr/src/jicmp6/.libs/libjicmp6.la /usr/lib/jni/
-COPY --from=binary-build /usr/src/jicmp6/.libs/libjicmp6.so /usr/lib/jni/
-COPY --from=binary-build /usr/src/jicmp6/jicmp6.jar /usr/share/java/
+## Install jicmp
+#RUN mkdir -p /usr/lib/jni
+#COPY --from=binary-build /usr/src/jicmp/.libs/libjicmp.la /usr/lib/jni/
+#COPY --from=binary-build /usr/src/jicmp/.libs/libjicmp.so /usr/lib/jni/
+#COPY --from=binary-build /usr/src/jicmp/jicmp.jar /usr/share/java/
+#
+## Install jicmp6
+#COPY --from=binary-build /usr/src/jicmp6/.libs/libjicmp6.la /usr/lib/jni/
+#COPY --from=binary-build /usr/src/jicmp6/.libs/libjicmp6.so /usr/lib/jni/
+#COPY --from=binary-build /usr/src/jicmp6/jicmp6.jar /usr/share/java/
 
 # Install jattach
 COPY --from=binary-build /usr/src/jattach/build/jattach /usr/bin/

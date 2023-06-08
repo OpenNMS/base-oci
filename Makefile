@@ -10,7 +10,7 @@
 
 SHELL                     := bash -o nounset -o pipefail -o errexit
 BUILD_DATE                := $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
-BASE_IMAGE                := redhat/ubi9-minimal
+BASE_IMAGE                := registry.access.redhat.com/ubi9-minimal
 
 DOCKER_BUILDKIT           := 1
 DOCKER_CLI_EXPERIMENTAL   := enabled
@@ -48,6 +48,8 @@ JICMP6_VERSION            := jicmp6-3.0.0-2
 
 JATTACH_GIT_REPO_URL      := https://github.com/jattach/jattach
 JATTACH_VERSION           := v2.1
+
+HAVEGED_GIT_REPO_URL      := https://github.com/jirka-h/haveged
 
 CONFD_SOURCE              := https://github.com/kelseyhightower/confd.git
 CONFD_VERSION             := 0.16.0

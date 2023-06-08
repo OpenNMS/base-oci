@@ -8,7 +8,6 @@ FROM ${BASE_IMAGE} as core
 # The JNI Pinger is tested with getprotobyname("icmp") and it is null if inetutils-ping is missing.
 RUN microdnf -y upgrade && \
     microdnf install -y \
-        haveged \
         hostname \
         iputils \
         less \
@@ -22,22 +21,22 @@ RUN microdnf -y upgrade && \
     ln -sf vim /usr/bin/vi
 
 #FROM core as third-party-base
-#
-###
-## Pre-stage image to build jicmp and jicmp6
-###
-#FROM core as binary-build
-#
-## Install build dependencies for JICMP and JICMP6
-#RUN microdnf -y install \
-#    autoconf \
-#    automake \
-#    gcc \
-#    git \
-#    java-1.8.0-openjdk-devel \
-#    libtool \
-#    make
-#
+
+##
+# Pre-stage image to build various binaries
+##
+FROM core as binary-build
+
+## Install build dependencies
+RUN microdnf -y install \
+    autoconf \
+    automake \
+    gcc \
+    git \
+    java-1.8.0-openjdk-devel \
+    libtool \
+    make
+
 ## Checkout and build JICMP
 #RUN git config --global advice.detachedHead false
 #
@@ -55,9 +54,17 @@ RUN microdnf -y upgrade && \
 #    autoreconf -fvi && \
 #    ./configure
 #RUN cd /usr/src/jicmp6 && make -j1
-#
-#RUN git clone --depth 1 --branch "${JATTACH_VERSION}" "${JATTACH_GIT_REPO_URL}" /usr/src/jattach
-#RUN cd /usr/src/jattach && make -j1
+
+## Checkout and build jattach
+RUN git clone --depth 1 --branch "${JATTACH_VERSION}" "${JATTACH_GIT_REPO_URL}" /usr/src/jattach
+RUN cd /usr/src/jattach && make
+
+## Checkout and build haveged
+RUN git clone --depth 1 "${HAVEGED_GIT_REPO_URL}" /usr/src/haveged
+RUN cd /usr/src/haveged && \
+    ./configure --disable-shared && \
+    make && \
+    make install
 
 ##
 # Assemble deploy base image with jattach, confd and OpenJDK
@@ -109,6 +116,9 @@ RUN if [ "$(uname -m)" = "x86_64" ]; then \
 
 # Install jattach
 COPY --from=binary-build /usr/src/jattach/build/jattach /usr/bin/
+
+# Install haveged
+COPY --from=binary-build /usr/local/sbin/haveged /usr/sbin/
 
 RUN mkdir -p /opt/prom-jmx-exporter && \
     curl "${PROM_JMX_EXPORTER_URL}" --output /opt/prom-jmx-exporter/jmx_prometheus_javaagent.jar 

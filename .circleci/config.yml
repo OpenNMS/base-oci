@@ -42,6 +42,10 @@ jobs:
     steps:
       - checkout
       - run:
+          name: Login to DockerHub
+          command: |
+            docker login -u "${DOCKERHUB_LOGIN}" -p "${DOCKERHUB_PASS}"
+      - run:
           name: multiarch/qemu-user-static
           command: DOCKER_CONTENT_TRUST=0 docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
       - run:
@@ -153,6 +157,8 @@ workflows:
   main:
     jobs:
       - local-oci-build:
+          context:
+            - "docker-publish-account"
           matrix:
             parameters:
               architecture: [linux/amd64,linux/arm64,linux/arm/v7]

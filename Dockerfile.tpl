@@ -8,6 +8,7 @@ FROM ${BASE_IMAGE} as core
 # The JNI Pinger is tested with getprotobyname("icmp") and it is null if inetutils-ping is missing.
 RUN microdnf -y upgrade && \
     microdnf install -y \
+        haveged \
         hostname \
         iputils \
         less \

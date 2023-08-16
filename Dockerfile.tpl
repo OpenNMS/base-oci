@@ -14,6 +14,7 @@ RUN microdnf -y upgrade && \
         openssh-clients \
         rsync \
         tar \
+        unzip \
         uuid \
         vim-minimal \
     && \

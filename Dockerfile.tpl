@@ -18,6 +18,7 @@ RUN apt-get update && \
         openssh-client \
         rsync \
         tzdata \
+        unzip \
         vim-tiny \
     && \
     ln -sf vi /usr/bin/vim && \
@@ -89,6 +90,7 @@ RUN mkdir -p "/usr/lib/jvm/java-nocap" && \
     ln -s "${JAVA_HOME}/release" "/usr/lib/jvm/java-nocap/release"
 
 RUN setcap CAP_NET_BIND_SERVICE+ep "${JAVA_HOME}/bin/java" && \
+    setcap CAP_NET_RAW+ep "${JAVA_HOME}/bin/java" && \
     echo "${JAVA_HOME}/lib/jli" > /etc/ld.so.conf.d/java-latest.conf && \
     ldconfig
 

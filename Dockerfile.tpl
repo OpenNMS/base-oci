@@ -89,8 +89,7 @@ RUN mkdir -p "/usr/lib/jvm/java-nocap" && \
     ln -s "${JAVA_HOME}/release" "/usr/lib/jvm/java-nocap/release"
 
 # To be able to use DGRAM to send ICMP messages we have to give the java binary CAP_NET_RAW capabilities in Linux.
-RUN setcap CAP_NET_BIND_SERVICE+ep "${JAVA_HOME}/bin/java" && \
-    setcap CAP_NET_RAW+ep "${JAVA_HOME}/bin/java" && \
+RUN setcap "CAP_NET_BIND_SERVICE=+ep CAP_NET_RAW=+ep" "${JAVA_HOME}/bin/java" && \
     echo "${JAVA_HOME}/lib/jli"  > /etc/ld.so.conf.d/java-latest.conf && \
     echo "${JAVA_HOME}/lib"     >> /etc/ld.so.conf.d/java-latest.conf && \
     ldconfig

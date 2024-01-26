@@ -77,22 +77,12 @@ RUN microdnf -y install \
     && \
     rm -rf /var/cache/yum
 
-# Preserve a pristine copy of the Java binaries before we apply setcap
-# Symlink to the other resources vs copying to keep the container image smaller
-RUN mkdir -p "/usr/lib/jvm/java-nocap" && \
-    cp -R "${JAVA_HOME}/bin" "/usr/lib/jvm/java-nocap/" && \
-    ln -s "${JAVA_HOME}/conf" "/usr/lib/jvm/java-nocap/conf" && \
-    ln -s "${JAVA_HOME}/docs" "/usr/lib/jvm/java-nocap/docs" && \
-    ln -s "${JAVA_HOME}/legal" "/usr/lib/jvm/java-nocap/legal" && \
-    ln -s "${JAVA_HOME}/lib" "/usr/lib/jvm/java-nocap/lib" && \
-    ln -s "${JAVA_HOME}/man" "/usr/lib/jvm/java-nocap/man" && \
-    ln -s "${JAVA_HOME}/release" "/usr/lib/jvm/java-nocap/release"
+# Set JAVA_HOME at runtime
+ENV JAVA_HOME=${JAVA_HOME}
 
 # To be able to use DGRAM to send ICMP messages we have to give the java binary CAP_NET_RAW capabilities in Linux.
-RUN setcap "CAP_NET_BIND_SERVICE=+ep CAP_NET_RAW=+ep" "${JAVA_HOME}/bin/java" && \
-    echo "${JAVA_HOME}/lib/jli"  > /etc/ld.so.conf.d/java-latest.conf && \
-    echo "${JAVA_HOME}/lib"     >> /etc/ld.so.conf.d/java-latest.conf && \
-    ldconfig
+COPY do-setcap.sh /usr/local/bin/
+RUN /usr/local/bin/do-setcap.sh
 
 # Install confd
 RUN if [ "$(uname -m)" = "x86_64" ]; then \
@@ -103,7 +93,8 @@ RUN if [ "$(uname -m)" = "x86_64" ]; then \
       curl -L "https://github.com/abtreece/confd/releases/download/v0.19.1/confd-v0.19.1-linux-arm64.tar.gz" --output /tmp/confd.tar.gz; \
     fi && \
     cd /usr/bin && \
-    tar -xzf /tmp/confd.tar.gz
+    tar -xzf /tmp/confd.tar.gz && \
+    rm -f /tmp/confd.tar.gz
 
 ## Install jicmp
 RUN mkdir -p /usr/lib/jni
@@ -146,5 +137,3 @@ LABEL org.opencontainers.image.created="${BUILD_DATE}" \
       org.opennms.cicd.buildurl="${BUILD_URL}" \
       org.opennms.cicd.buildnumber="${BUILD_NUMBER}"
 
-# Set JAVA_HOME at runtime
-ENV JAVA_HOME=${JAVA_HOME}

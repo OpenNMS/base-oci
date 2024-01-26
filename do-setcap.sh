@@ -22,5 +22,6 @@ for SUBDIR in conf docs legal lib man release; do
 done
 
 setcap "CAP_NET_BIND_SERVICE=+ep CAP_NET_RAW=+ep" "${JAVA_HOME}/bin/java"
-echo "${JAVA_HOME}/lib/jli" > /etc/ld.so.conf.d/java-latest.conf
+echo "${JAVA_HOME}/lib/jli"  > /etc/ld.so.conf.d/java-latest.conf
+echo "${JAVA_HOME}/lib"     >> /etc/ld.so.conf.d/java-latest.conf
 ldconfig

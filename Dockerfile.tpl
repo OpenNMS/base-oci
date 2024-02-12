@@ -43,7 +43,7 @@ RUN apt-get update && \
         build-essential \
         dh-autoreconf \
         git-core \
-        openjdk-11-jdk-headless
+        openjdk-8-jdk-headless
 
 # Install build dependencies for JICMP and JICMP6
 # Checkout and build JICMP

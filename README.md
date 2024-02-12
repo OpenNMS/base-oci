@@ -6,7 +6,7 @@ The goal is to provide a small cacheable image which satisfies the dependencies 
 It provides the following major dependencies:
 
 * Official Ubuntu base image
-* OpenJDK JRE 11
+* OpenJDK JRE (LTS releases)
 * JICMP and JICMP6 libraries
 * JMX Prometheus exporter
 * confd

@@ -162,7 +162,7 @@ workflows:
           matrix:
             parameters:
               architecture: [linux/amd64,linux/arm64,linux/arm/v7]
-              jdk: ["11", "17"]
+              jdk: ["11", "17", "21"]
           filters:
             branches:
               ignore:
@@ -172,7 +172,7 @@ workflows:
           matrix:
             parameters:
               architecture: [linux/amd64,linux/arm64,linux/arm/v7]
-              jdk: ["11", "17"]
+              jdk: ["11", "17", "21"]
           context:
             - "docker-content-trust"
             - "docker-publish-account"
@@ -184,7 +184,7 @@ workflows:
       - publish-multi-arch:
           matrix:
             parameters:
-              jdk: ["11", "17"]
+              jdk: ["11", "17", "21"]
           context:
             - "docker-content-trust"
             - "docker-publish-account"

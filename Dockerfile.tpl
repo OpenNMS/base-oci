@@ -18,6 +18,8 @@ RUN microdnf -y upgrade && \
         unzip \
         uuid \
         vim \
+        /usr/bin/ps \
+        /usr/bin/which \
     && \
     rm -rf /var/cache/yum && \
     ln -sf vim /usr/bin/vi

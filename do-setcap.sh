@@ -10,7 +10,7 @@ fi
 NOCAP_HOME="/usr/lib/jvm/java-nocap"
 
 create_link() {
-    if [ ! -e "${NOCAP_HOME}/$1" ]; then
+    if [ -e "${JAVA_HOME}/$1" ] && [ ! -e "${NOCAP_HOME}/$1" ]; then
         ln -s "${JAVA_HOME}/$1" "${NOCAP_HOME}/$1"
     fi
 }

@@ -6,8 +6,9 @@ FROM ${BASE_IMAGE} as core
 
 # We need to install inetutils-ping to get the JNI Pinger to work.
 # The JNI Pinger is tested with getprotobyname("icmp") and it is null if inetutils-ping is missing.
+# TODO: switch `vim` back to `vim-minimal` once https://issues.redhat.com/browse/RHEL-25748 is resolved
 RUN microdnf -y upgrade && \
-    microdnf install -y \
+    microdnf -y install \
         hostname \
         iputils \
         less \
@@ -16,12 +17,10 @@ RUN microdnf -y upgrade && \
         tar \
         unzip \
         uuid \
-        vim-minimal \
+        vim \
     && \
     rm -rf /var/cache/yum && \
     ln -sf vim /usr/bin/vi
-
-#FROM core as third-party-base
 
 ##
 # Pre-stage image to build various binaries

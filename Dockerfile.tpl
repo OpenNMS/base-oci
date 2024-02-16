@@ -17,12 +17,11 @@ RUN microdnf -y upgrade && \
         tar \
         unzip \
         uuid \
-        vim \
+        vim-minimal \
         /usr/bin/ps \
         /usr/bin/which \
     && \
-    rm -rf /var/cache/yum && \
-    ln -sf vim /usr/bin/vi
+    rm -rf /var/cache/yum
 
 ##
 # Pre-stage image to build various binaries

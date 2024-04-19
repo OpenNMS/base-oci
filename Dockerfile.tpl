@@ -12,6 +12,7 @@ RUN microdnf -y upgrade && \
         hostname \
         iputils \
         less \
+        ncurses \
         openssh-clients \
         rsync \
         tar \

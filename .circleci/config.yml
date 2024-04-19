@@ -2,15 +2,14 @@
 version: 2.1
 
 aliases:
-  - &setup_dct_env
+  - &setup_env
     name: Setup DCT environment
     command: |
-      echo "export DOCKER_CONTENT_TRUST=1" >> $BASH_ENV
+      # echo "export DOCKER_CONTENT_TRUST=1" >> $BASH_ENV
+      # echo "export CONTAINER_REGISTRY_LOGIN='${DOCKERHUB_LOGIN}'" >> $BASH_ENV
+      # echo "export CONTAINER_REGISTRY_PASS='${DOCKERHUB_PASS}'" >> $BASH_ENV
       echo "export DOCKER_REGISTRY=${DOCKER_REGISTRY}" >> $BASH_ENV
       echo "export DOCKER_ORG=${DOCKER_ORG}" >> $BASH_ENV
-      echo "export DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE=\"$DCT_DELEGATE_KEY_PASSPHRASE\"" >> $BASH_ENV
-      echo "export CONTAINER_REGISTRY_LOGIN='${DOCKERHUB_LOGIN}'" >> $BASH_ENV
-      echo "export CONTAINER_REGISTRY_PASS='${DOCKERHUB_PASS}'" >> $BASH_ENV
       echo "export IMAGE=${DOCKER_REGISTRY}/${DOCKER_ORG}/deploy-base" >> $BASH_ENV
       echo "export VERSION=ubuntu-$(cat version.txt | sed -e 's,[\r\n]*,,').b<< pipeline.number >>" >> $BASH_ENV
     environment:
@@ -70,7 +69,7 @@ jobs:
       DOCKER_CLI_EXPERIMENTAL: enabled
     steps:
       - checkout
-      # - run: *setup_dct_env
+      - run: *setup_env
       # - run: *load_dct_keys
       - run:
           name: Login to DockerHub
@@ -101,7 +100,7 @@ jobs:
       DOCKER_CLI_EXPERIMENTAL: enabled
     steps:
       - checkout
-      # - run: *setup_dct_env
+      - run: *setup_env
       # - run: *load_dct_keys
       - run:
           name: Login to DockerHub

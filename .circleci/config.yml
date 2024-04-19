@@ -5,9 +5,9 @@ aliases:
   - &setup_dct_env
     name: Setup DCT environment
     command: |
+      echo "export DOCKER_CONTENT_TRUST=1" >> $BASH_ENV
       echo "export DOCKER_REGISTRY=${DOCKER_REGISTRY}" >> $BASH_ENV
       echo "export DOCKER_ORG=${DOCKER_ORG}" >> $BASH_ENV
-      echo "export DOCKER_CONTENT_TRUST=1" >> $BASH_ENV
       echo "export DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE=\"$DCT_DELEGATE_KEY_PASSPHRASE\"" >> $BASH_ENV
       echo "export CONTAINER_REGISTRY_LOGIN='${DOCKERHUB_LOGIN}'" >> $BASH_ENV
       echo "export CONTAINER_REGISTRY_PASS='${DOCKERHUB_PASS}'" >> $BASH_ENV
@@ -70,8 +70,8 @@ jobs:
       DOCKER_CLI_EXPERIMENTAL: enabled
     steps:
       - checkout
-      - run: *setup_dct_env
-      - run: *load_dct_keys
+      # - run: *setup_dct_env
+      # - run: *load_dct_keys
       - run:
           name: Login to DockerHub
           command: |
@@ -101,8 +101,8 @@ jobs:
       DOCKER_CLI_EXPERIMENTAL: enabled
     steps:
       - checkout
-      - run: *setup_dct_env
-      - run: *load_dct_keys
+      # - run: *setup_dct_env
+      # - run: *load_dct_keys
       - run:
           name: Login to DockerHub
           command: |
@@ -139,18 +139,13 @@ jobs:
             echo "Manifest contents:\n";
             printf "${MANIFEST_FROM_REG}" | jq -r '.[].Descriptor | "Architecture: " + .platform.architecture + .platform.variant + ", digest: " + .digest';
             export NOTARY_AUTH="$(printf "${DOCKERHUB_LOGIN}:${DOCKERHUB_PASS}" | base64 -w0)"
+
             echo "Sign ${SHA_256} with the notary"
-            # when the multi-arch image is signed by the delegate key then docker pull reports "No valid trust data..."
-            # -> the following lines can not be used:
-            #
-            # export NOTARY_DELEGATION_PASSPHRASE="${DCT_DELEGATE_KEY_PASSPHRASE}"
-            # notary -d ~/.docker/trust/ -s https://notary.docker.io addhash "${IMAGE}" "${VERSION}" 946 --sha256 "${SHA_256}" --roles targets/opennms-circle-delegate --publish --verbose
-            #
             # -> use the targets key of the deploy-base repository to sign the multi-arch image instead
-            export NOTARY_TARGETS_PASSPHRASE="${DCT_REPO_DEPLOY_BASE_KEY_PASSPHRASE}"
-            notary -d ~/.docker/trust/ -s https://notary.docker.io addhash "${IMAGE}" "${VERSION}" "${BYTES_SIZE}" --sha256 "${SHA_256}" --publish --verbose
+            # DISABLED for now, uncomment this and the *_dct_* stuff above to turn signing back on
+            # export NOTARY_TARGETS_PASSPHRASE="${DCT_REPO_DEPLOY_BASE_KEY_PASSPHRASE}"
+            # notary -d ~/.docker/trust/ -s https://notary.docker.io addhash "${IMAGE}" "${VERSION}" "${BYTES_SIZE}" --sha256 "${SHA_256}" --publish --verbose
             echo "Done!"
-            # notary -s https://notary.docker.io list "${IMAGE}"
 
 workflows:
   version: 2

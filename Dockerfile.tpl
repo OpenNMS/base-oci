@@ -104,9 +104,6 @@ COPY --from=binary-build /usr/src/jicmp6/jicmp6.jar /usr/share/java/
 # Install jattach
 COPY --from=binary-build /usr/src/jattach/build/jattach /usr/bin/
 
-# Install haveged
-COPY --from=binary-build /usr/local/sbin/haveged /usr/sbin/
-
 RUN mkdir -p /opt/prom-jmx-exporter && \
     curl "${PROM_JMX_EXPORTER_URL}" --output /opt/prom-jmx-exporter/jmx_prometheus_javaagent.jar 
 

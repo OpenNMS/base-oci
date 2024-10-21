@@ -61,14 +61,6 @@ RUN cd /usr/src/jicmp6 && make -j1
 RUN git clone --depth 1 --branch "${JATTACH_VERSION}" "${JATTACH_GIT_REPO_URL}" /usr/src/jattach
 RUN cd /usr/src/jattach && make
 
-## Checkout and build haveged
-RUN git clone --depth 1 "${HAVEGED_GIT_REPO_URL}" /usr/src/haveged
-RUN cd /usr/src/haveged && \
-    ./configure --disable-shared && \
-    autoreconf --force --install && \ 
-    make && \
-    make install
-
 ##
 # Assemble deploy base image with jattach, confd and OpenJDK
 ##

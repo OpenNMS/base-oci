@@ -2,7 +2,7 @@
 # do some common things that all layers use, on top of the UBI base; also
 # make sure security updates are installed
 ##
-FROM ${BASE_IMAGE} as core
+FROM ${BASE_IMAGE} AS core
 
 # We need to install inetutils-ping to get the JNI Pinger to work.
 # The JNI Pinger is tested with getprotobyname("icmp") and it is null if inetutils-ping is missing.
@@ -27,7 +27,7 @@ RUN microdnf -y upgrade && \
 ##
 # Pre-stage image to build various binaries
 ##
-FROM core as binary-build
+FROM core AS binary-build
 
 ## Install build dependencies
 RUN microdnf -y install \
@@ -60,13 +60,6 @@ RUN cd /usr/src/jicmp6 && make -j1
 ## Checkout and build jattach
 RUN git clone --depth 1 --branch "${JATTACH_VERSION}" "${JATTACH_GIT_REPO_URL}" /usr/src/jattach
 RUN cd /usr/src/jattach && make
-
-## Checkout and build haveged
-RUN git clone --depth 1 "${HAVEGED_GIT_REPO_URL}" /usr/src/haveged
-RUN cd /usr/src/haveged && \
-    ./configure --disable-shared && \
-    make && \
-    make install
 
 ##
 # Assemble deploy base image with jattach, confd and OpenJDK
@@ -110,9 +103,6 @@ COPY --from=binary-build /usr/src/jicmp6/jicmp6.jar /usr/share/java/
 
 # Install jattach
 COPY --from=binary-build /usr/src/jattach/build/jattach /usr/bin/
-
-# Install haveged
-COPY --from=binary-build /usr/local/sbin/haveged /usr/sbin/
 
 RUN mkdir -p /opt/prom-jmx-exporter && \
     curl "${PROM_JMX_EXPORTER_URL}" --output /opt/prom-jmx-exporter/jmx_prometheus_javaagent.jar 
